@@ -36,7 +36,8 @@ await rm(path.join(outDir, '.env'), { force: true });
 await mkdir(path.join(outDir, '.next'), { recursive: true });
 await copyIfExists(path.join(root, '.next', 'static'), path.join(outDir, '.next', 'static'));
 await copyIfExists(path.join(root, 'public'), path.join(outDir, 'public'));
-await copyIfExists(path.join(root, 'prisma'), path.join(outDir, 'prisma'));
+await mkdir(path.join(outDir, 'prisma'), { recursive: true });
+await copyIfExists(path.join(root, 'prisma', 'schema.prisma'), path.join(outDir, 'prisma', 'schema.prisma'));
 
 await mkdir(path.join(outDir, 'node_modules'), { recursive: true });
 await copyIfExists(path.join(root, 'node_modules', 'prisma'), path.join(outDir, 'node_modules', 'prisma'));
