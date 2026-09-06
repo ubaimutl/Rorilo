@@ -15,7 +15,7 @@ import { CompanyLogo } from '@/components/CompanyLogo';
 import { orderFreeSources } from '@/lib/job-sources/free';
 import { KNOWN_JOB_SOURCES, orderApifyPicker } from '@/lib/job-sources/sources';
 import { sourceCoverageGroupTitle, sourceCoverageLabel, sourceCoveragePriority } from '@/lib/job-sources/countries';
-import { useI18n } from '@/components/I18nProvider';
+import { richText, useI18n } from '@/components/I18nProvider';
 import { notify } from '@/components/AppNotifications';
 
 const BOARD_PROVIDER_OPTIONS = [
@@ -548,7 +548,7 @@ export default function SettingsPage() {
   const handleImportBackup = async (file: File | null) => {
     if (!file) return;
     const shouldImport = window.confirm(
-      'Import this backup into the current app database? Existing jobs, profile, applications, settings, and drafts will be replaced.'
+      t('settings.backupImportConfirm')
     );
     if (!shouldImport) return;
 
@@ -566,7 +566,7 @@ export default function SettingsPage() {
         setBackupResult(t('common.saveFailed', { error: data.error || `server responded ${res.status}` }));
         return;
       }
-      setBackupResult(`Imported ${data.importedRows || 0} rows. Reload the app to refresh every page.`);
+      setBackupResult(t('settings.backupImported', { count: data.importedRows || 0 }));
       await fetchSettings();
     } catch (err) {
       setBackupResult(t('common.saveFailed', { error: (err as Error).message }));
@@ -597,32 +597,32 @@ export default function SettingsPage() {
           <CardContent className="flex flex-col gap-4">
           <div>
             <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              AI Provider
+              {t('settings.aiTitle')}
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              Model used for deterministic analysis, match explanation, and application material generation. Supports OpenAI-compatible providers.
+              {t('settings.aiDescription')}
             </p>
           </div>
 
           <form onSubmit={handleSaveAI} className="flex flex-col gap-4" autoComplete="off">
             <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-3">
               <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold text-neutral-900">Primary provider</h3>
-                <p className="text-xs text-neutral-500">Used first. Add fallback providers below for backup.</p>
+                <h3 className="text-sm font-semibold text-neutral-900">{t('settings.aiPrimary')}</h3>
+                <p className="text-xs text-neutral-500">{t('settings.aiPrimaryHint')}</p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="ai-name" className="text-sm font-medium text-neutral-700">Name</Label>
+                  <Label htmlFor="ai-name" className="text-sm font-medium text-neutral-700">{t('settings.aiNameLabel')}</Label>
                   <Input
                     id="ai-name"
                     value={aiProviderName}
                     onChange={(e) => setAiProviderName(e.target.value)}
                     className="text-xs h-8"
-                    placeholder="OpenAI"
+                    placeholder={t('settings.aiNamePh')}
                   />
                 </div>
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="ai-base" className="text-sm font-medium text-neutral-700">Base URL</Label>
+                  <Label htmlFor="ai-base" className="text-sm font-medium text-neutral-700">{t('settings.aiBaseLabel')}</Label>
                   <Input
                     id="ai-base"
                     value={aiBaseUrl}
@@ -646,9 +646,9 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="flex-1">
-                  <SecretInput
-                    id="ai-key"
-                    label="API Key"
+                <SecretInput
+                  id="ai-key"
+                  label={t('settings.aiKeyLabel')}
                     value={aiApiKey}
                     onChange={setAiApiKey}
                     placeholder={hasApiKey ? 'Key saved. Leave blank to keep' : 'sk-...'}
@@ -666,7 +666,7 @@ export default function SettingsPage() {
                   className="text-xs h-7"
                 >
                   {aiTesting ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
-                  <span>Test primary</span>
+                  <span>{t('settings.aiTestPrimary')}</span>
                 </Button>
                 {aiTestResult && (
                   <span className="text-xs text-neutral-600">{aiTestResult}</span>
@@ -674,12 +674,12 @@ export default function SettingsPage() {
               </div>
               <details className="rounded-lg border border-neutral-200 bg-neutral-50/80">
                 <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-medium text-neutral-700">
-                  <span>Advanced provider options</span>
+                  <span>{t('settings.aiAdvanced')}</span>
                   <Info className="size-3.5 text-neutral-400" />
                 </summary>
                 <div className="flex flex-col gap-3 border-t border-neutral-200 px-3 py-3">
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-                    These options are only used for structured JSON tasks like triage, CV parsing, and draft generation. “Disable reasoning” uses provider-specific fields for DeepSeek, Ollama, and Qwen; use raw JSON only when your provider needs a custom option.
+                    {t('settings.aiAdvancedNote')}
                   </div>
                   <label className="flex items-start gap-2 text-xs text-neutral-700">
                     <input
@@ -689,8 +689,8 @@ export default function SettingsPage() {
                       className="mt-0.5 size-3.5 rounded border-neutral-300 text-neutral-900"
                     />
                     <span>
-                      <span className="font-medium text-neutral-900">Structured output mode</span>
-                      <span className="block text-neutral-500">Adds JSON mode when the provider supports OpenAI-compatible `response_format`.</span>
+                      <span className="font-medium text-neutral-900">{t('settings.aiStructured')}</span>
+                      <span className="block text-neutral-500">{t('settings.aiStructuredHint')}</span>
                     </span>
                   </label>
                   <label className="flex items-start gap-2 text-xs text-neutral-700">
@@ -701,12 +701,12 @@ export default function SettingsPage() {
                       className="mt-0.5 size-3.5 rounded border-neutral-300 text-neutral-900"
                     />
                     <span>
-                      <span className="font-medium text-neutral-900">Disable reasoning for JSON tasks</span>
-                      <span className="block text-neutral-500">Helps avoid empty `content` responses from thinking models.</span>
+                      <span className="font-medium text-neutral-900">{t('settings.aiReasoning')}</span>
+                      <span className="block text-neutral-500">{t('settings.aiReasoningHint')}</span>
                     </span>
                   </label>
                   <div className="space-y-1.5">
-                    <Label htmlFor="ai-provider-options" className="text-xs font-medium text-neutral-700">Raw extra request JSON</Label>
+                    <Label htmlFor="ai-provider-options" className="text-xs font-medium text-neutral-700">{t('settings.aiRawJson')}</Label>
                     <Textarea
                       id="ai-provider-options"
                       value={aiProviderOptionsJson}
@@ -723,12 +723,12 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-900">Fallback providers</h3>
-                  <p className="text-xs text-neutral-500">Tried in order when an earlier provider fails.</p>
+                  <h3 className="text-sm font-semibold text-neutral-900">{t('settings.aiFallbacks')}</h3>
+                  <p className="text-xs text-neutral-500">{t('settings.aiFallbacksHint')}</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addFallbackProvider} className="h-8 text-xs">
                   <Plus className="size-3.5" />
-                  <span>Add fallback</span>
+                  <span>{t('settings.aiAddFallback')}</span>
                 </Button>
               </div>
               {fallbackProviders.length > 0 && (
@@ -743,13 +743,13 @@ export default function SettingsPage() {
                             onChange={(e) => updateFallbackProvider(provider.id, { enabled: e.target.checked })}
                             className="size-3.5 rounded border-neutral-300 text-neutral-900"
                           />
-                          Fallback {index + 1}
+                          {t('settings.aiFallbackNth', { n: index + 1 })}
                         </label>
                         <button
                           type="button"
                           onClick={() => removeFallbackProvider(provider.id)}
                           className="rounded-md p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                          title="Remove fallback"
+                          title={t('settings.aiRemoveFallback')}
                         >
                           <X className="size-3.5" />
                         </button>
@@ -758,19 +758,19 @@ export default function SettingsPage() {
                         <Input
                           value={provider.name}
                           onChange={(e) => updateFallbackProvider(provider.id, { name: e.target.value })}
-                          placeholder="Name"
+                          placeholder={t('settings.aiNamePh')}
                           className="h-8 text-xs sm:w-36"
                         />
                         <Input
                           value={provider.baseUrl}
                           onChange={(e) => updateFallbackProvider(provider.id, { baseUrl: e.target.value })}
-                          placeholder="Base URL"
+                          placeholder={t('settings.aiBaseLabel')}
                           className="h-8 flex-1 font-mono text-xs"
                         />
                         <Input
                           value={provider.model}
                           onChange={(e) => updateFallbackProvider(provider.id, { model: e.target.value })}
-                          placeholder="Model"
+                          placeholder={t('settings.aiModelPh')}
                           className="h-8 flex-1 font-mono text-xs"
                         />
                       </div>
@@ -794,13 +794,13 @@ export default function SettingsPage() {
                           className="h-8 text-xs"
                         >
                           {provider.testing ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
-                          <span>Test</span>
+                          <span>{t('settings.aiTest')}</span>
                         </Button>
                       </div>
                       {provider.testResult && <p className="text-xs text-neutral-600">{provider.testResult}</p>}
                       <details className="rounded-lg border border-neutral-200 bg-neutral-50/80">
                         <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-xs font-medium text-neutral-700">
-                          <span>Advanced options</span>
+                          <span>{t('settings.aiAdvanced')}</span>
                           <Info className="size-3.5 text-neutral-400" />
                         </summary>
                         <div className="flex flex-col gap-3 border-t border-neutral-200 px-3 py-3">
@@ -812,8 +812,8 @@ export default function SettingsPage() {
                               className="mt-0.5 size-3.5 rounded border-neutral-300 text-neutral-900"
                             />
                             <span>
-                              <span className="font-medium text-neutral-900">Structured output mode</span>
-                              <span className="block text-neutral-500">Use JSON mode for schema-based tasks.</span>
+                              <span className="font-medium text-neutral-900">{t('settings.aiStructured')}</span>
+                              <span className="block text-neutral-500">{t('settings.aiStructuredHint')}</span>
                             </span>
                           </label>
                           <label className="flex items-start gap-2 text-xs text-neutral-700">
@@ -824,12 +824,12 @@ export default function SettingsPage() {
                               className="mt-0.5 size-3.5 rounded border-neutral-300 text-neutral-900"
                             />
                             <span>
-                              <span className="font-medium text-neutral-900">Disable reasoning for JSON tasks</span>
-                              <span className="block text-neutral-500">Uses known switches for DeepSeek, Ollama, and Qwen.</span>
+                              <span className="font-medium text-neutral-900">{t('settings.aiReasoning')}</span>
+                              <span className="block text-neutral-500">{t('settings.aiReasoningHint')}</span>
                             </span>
                           </label>
                           <div className="space-y-1.5">
-                            <Label htmlFor={`fallback-options-${provider.id}`} className="text-xs font-medium text-neutral-700">Raw extra request JSON</Label>
+                            <Label htmlFor={`fallback-options-${provider.id}`} className="text-xs font-medium text-neutral-700">{t('settings.aiRawJson')}</Label>
                             <Textarea
                               id={`fallback-options-${provider.id}`}
                               value={provider.providerOptionsJson || '{\n}'}
@@ -861,7 +861,7 @@ export default function SettingsPage() {
                 disabled={aiSaving}
                 className="text-xs h-7 px-3"
               >
-                {aiSaving ? 'Saving...' : 'Save changes'}
+                {aiSaving ? t('common.saving') : t('common.saveChanges')}
               </Button>
             </div>
           </form>
@@ -878,17 +878,17 @@ export default function SettingsPage() {
               </span>
               <div>
                 <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  Backup & restore
+                  {t('settings.backupTitle')}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Move your profile, settings, jobs, drafts, and application tracker between Docker, local development, and the desktop app.
+                  {t('settings.backupDescription')}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs leading-relaxed text-neutral-600">
-                Export creates a JSON backup. Keep it private because it can include saved keys. Import replaces the current app database with the backup contents.
+                {t('settings.backupExplain')}
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <a
@@ -897,18 +897,18 @@ export default function SettingsPage() {
                   onClick={() => {
                     notify({
                       type: 'success',
-                      title: 'Backup export started',
-                      message: 'Check your Downloads folder.',
+                      title: t('settings.backupExportTitle'),
+                      message: t('settings.backupExportMsg'),
                     });
                   }}
                   className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   <Download className="size-3.5" />
-                  <span>Export backup</span>
+                  <span>{t('settings.backupExport')}</span>
                 </a>
                 <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-muted">
                   {backupImporting ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-                  <span>{backupImporting ? 'Importing...' : 'Import backup'}</span>
+                  <span>{backupImporting ? t('common.importing') : t('settings.backupImport')}</span>
                   <input
                     type="file"
                     accept="application/json,.json"
@@ -934,10 +934,10 @@ export default function SettingsPage() {
           <CardContent className="flex flex-col gap-4">
           <div>
             <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              Job Discovery
+              {t('settings.apifyTitle')}
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              Apify cloud scraper configuration for running automated discovery on LinkedIn or Indeed.
+              {t('settings.apifyDescription')}
             </p>
           </div>
 
@@ -945,7 +945,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <SecretInput
                 id="apify-tok"
-                label="Apify API Token"
+                label={t('settings.apifyTokenLabel')}
                 value={apifyToken}
                 onChange={setApifyToken}
                 placeholder={hasApifyToken ? '••••••••••••••••' : 'apify_api_...'}
@@ -955,9 +955,9 @@ export default function SettingsPage() {
               {/* Job Sources Selection */}
               <div className="space-y-2.5">
                 <div>
-                  <Label className="text-xs font-semibold text-neutral-800">Job Sources</Label>
+                  <Label className="text-xs font-semibold text-neutral-800">{t('settings.apifySourcesTitle')}</Label>
                   <p className="text-xs text-neutral-500">
-                    Enable the job boards you want Rorilo to search:
+                    {t('settings.apifySourcesHint')}
                   </p>
                 </div>
 
@@ -965,7 +965,7 @@ export default function SettingsPage() {
                   {/* Global job boards */}
                   <div className="space-y-2">
                     <span className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
-                      <span>Global Career Portals</span>
+                      <span>{t('settings.apifyRegionGlobal')}</span>
                     </span>
                     <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
                       {orderApifyPicker(KNOWN_JOB_SOURCES, 'DE')
@@ -987,7 +987,7 @@ export default function SettingsPage() {
                                   <span className="text-xs font-semibold text-neutral-900">{src.name}</span>
                                   {isEnabled && (
                                     <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-medium">
-                                      Active
+                                      {t('settings.apifyActive')}
                                     </span>
                                   )}
                                 </div>
@@ -1009,7 +1009,7 @@ export default function SettingsPage() {
                   {/* Country and regional boards */}
                   <div className="space-y-2">
                     <span className="text-xs font-semibold text-neutral-600 flex items-center gap-1.5">
-                      <span>Germany & DACH portals</span>
+                      <span>{t('settings.apifyRegionDACH')}</span>
                     </span>
                     <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2.5">
                       {orderApifyPicker(KNOWN_JOB_SOURCES, 'DE')
@@ -1031,7 +1031,7 @@ export default function SettingsPage() {
                                   <span className="text-xs font-semibold text-neutral-900">{src.name}</span>
                                   {isEnabled && (
                                     <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-medium">
-                                      Active
+                                      {t('settings.apifyActive')}
                                     </span>
                                   )}
                                 </div>
@@ -1060,13 +1060,13 @@ export default function SettingsPage() {
                   className="text-xs text-neutral-500 hover:text-neutral-800 font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   {showCustomActors ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-                  <span>Advanced: Custom Apify Scraper Actors</span>
+                  <span>{t('settings.apifyCustomTitle')}</span>
                 </button>
 
                 {showCustomActors && (
                   <div className="mt-2.5 p-3 rounded-xl border border-neutral-200 bg-neutral-50 space-y-3">
                     <p className="text-xs text-neutral-500">
-                      If you have custom Apify scraper actors, you can add their IDs below:
+                      {t('settings.apifyCustomHint')}
                     </p>
                     <div className="space-y-2">
                       {apifyActorIds.map((actor) => (
@@ -1077,7 +1077,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon-sm"
                             onClick={() => removeApifyActor(actor)}
-                            title="Remove actor"
+                            title={t('settings.apifyRemoveActor')}
                           >
                             <Trash2 className="size-3.5" />
                           </Button>
@@ -1095,7 +1095,7 @@ export default function SettingsPage() {
                             addApifyActor();
                           }
                         }}
-                        placeholder="username/actor-name"
+                        placeholder={t('settings.apifyActorPh')}
                         className="font-mono text-xs h-8 bg-white"
                       />
                       <Button
@@ -1106,7 +1106,7 @@ export default function SettingsPage() {
                         className="text-xs h-8"
                       >
                         <Plus className="size-3.5" />
-                        <span>Add</span>
+                        <span>{t('settings.apifyAdd')}</span>
                       </Button>
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@ export default function SettingsPage() {
                   className="text-xs h-7"
                 >
                   {apifyTesting ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
-                  <span>Test token</span>
+                  <span>{t('settings.apifyTestToken')}</span>
                 </Button>
                 {apifyTestResult && (
                   <span className="text-xs text-neutral-600 truncate max-w-xs">{apifyTestResult}</span>
@@ -1150,7 +1150,7 @@ export default function SettingsPage() {
                   disabled={apifySaving}
                   className="text-xs h-7 px-3"
                 >
-                  {apifySaving ? 'Saving...' : 'Save changes'}
+                  {apifySaving ? t('common.saving') : t('common.saveChanges')}
                 </Button>
               </div>
             </div>
@@ -1165,16 +1165,16 @@ export default function SettingsPage() {
           <CardContent className="flex flex-col gap-4">
           <div>
             <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              Free Sources
+              {t('settings.freeTitle')}
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              API job feeds that cost nothing or have free tiers. Keys stay on this machine. Apify remains available as a paid fallback.
+              {t('settings.freeDescription')}
             </p>
           </div>
 
           <form onSubmit={handleSaveFree} className="flex flex-col gap-4" autoComplete="off">
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-neutral-700">Enabled by default in Find Roles</span>
+              <span className="text-sm font-medium text-neutral-700">{t('settings.freeEnabledTitle')}</span>
               <div className="flex flex-col gap-2.5">
                 {[0, 1, 2, 3].map((priority) => {
                   const sources = orderFreeSources('DE').filter((source) => sourceCoveragePriority(source.coverage, 'DE') === priority);
@@ -1182,7 +1182,7 @@ export default function SettingsPage() {
                   return (
                     <div key={priority} className="flex flex-wrap items-center gap-2">
                       <span className="w-full text-xs font-medium text-neutral-500 sm:w-28">
-                        {sourceCoverageGroupTitle(priority, 'DE')}
+                        {sourceCoverageGroupTitle(priority, 'DE', t)}
                       </span>
                       {sources.map((source) => {
                         const isOn = freeEnabled.includes(source.id);
@@ -1209,7 +1209,7 @@ export default function SettingsPage() {
                             />
                             <span>{source.name}</span>
                             <span className="text-neutral-400 font-normal">
-                              {needsBoards ? 'add boards below' : `${coverageLabel} · ${source.cost}`}
+                              {needsBoards ? t('settings.freeAddBoardsBelow') : `${coverageLabel} · ${source.cost}`}
                             </span>
                           </label>
                         );
@@ -1222,7 +1222,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="free-adzuna-id" className="text-sm font-medium text-neutral-700">Adzuna App ID</Label>
+                <Label htmlFor="free-adzuna-id" className="text-sm font-medium text-neutral-700">{t('settings.freeAdzunaId')}</Label>
                 <Input
                   id="free-adzuna-id"
                   name="rorilo-adzuna-id"
@@ -1235,7 +1235,7 @@ export default function SettingsPage() {
               </div>
               <SecretInput
                 id="free-adzuna-key"
-                label="Adzuna App Key"
+                label={t('settings.freeAdzunaKey')}
                 value={adzunaAppKey}
                 onChange={setAdzunaAppKey}
                 placeholder={hasAdzunaKey ? '••••••••••••••••' : '••••••••'}
@@ -1244,7 +1244,7 @@ export default function SettingsPage() {
               <div className="sm:col-span-2">
                 <SecretInput
                   id="free-techmap-key"
-                  label="Techmap API Key"
+                  label={t('settings.freeTechmapKey')}
                   value={techmapKey}
                   onChange={setTechmapKey}
                   placeholder={hasTechmapKey ? '••••••••••••••••' : 'RapidAPI key...'}
@@ -1255,9 +1255,9 @@ export default function SettingsPage() {
 
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-neutral-700">Company career boards</span>
+                <span className="text-sm font-medium text-neutral-700">{t('settings.freeBoardsTitle')}</span>
                 <p className="text-xs text-neutral-500">
-                  Add only companies you want to watch. Supports public Greenhouse, Lever, Ashby, and Personio boards.
+                  {t('settings.freeBoardsHint')}
                 </p>
               </div>
               {freeBoards.length > 0 && (
@@ -1300,7 +1300,7 @@ export default function SettingsPage() {
                           type="button"
                           onClick={() => removeCustomBoard(entry.provider, entry.board)}
                           className="p-1.5 rounded-md text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                          title="Remove board"
+                          title={t('settings.freeRemoveBoard')}
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -1310,7 +1310,7 @@ export default function SettingsPage() {
                 </div>
               )}
               <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-3">
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Board provider">
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('settings.freeBoardProviderAria')}>
                   {BOARD_PROVIDER_OPTIONS.map((provider) => {
                     const selected = newBoardProvider === provider.value;
                     return (
@@ -1334,15 +1334,15 @@ export default function SettingsPage() {
                   <Input
                     value={newBoardId}
                     onChange={(e) => setNewBoardId(e.target.value)}
-                    placeholder={newBoardProvider === 'personio' ? 'subdomain or career URL' : 'board-name'}
-                    aria-label="Board ID"
+                    placeholder={newBoardProvider === 'personio' ? t('settings.freeBoardPersonioPh') : t('settings.freeBoardPh')}
+                    aria-label={t('settings.freeBoardPh')}
                     className="text-xs h-9 bg-white flex-1"
                   />
                   <Input
                     value={newBoardCompany}
                     onChange={(e) => setNewBoardCompany(e.target.value)}
-                    placeholder="Company"
-                    aria-label="Company name"
+                    placeholder={t('settings.freeCompanyPh')}
+                    aria-label={t('settings.freeCompanyPh')}
                     className="text-xs h-9 bg-white flex-1"
                   />
                   <Button
@@ -1353,7 +1353,7 @@ export default function SettingsPage() {
                     className="text-xs h-9 sm:w-auto"
                   >
                     <Plus className="size-3.5" />
-                    <span>Add</span>
+                    <span>{t('settings.apifyAdd')}</span>
                   </Button>
                 </div>
               </div>
@@ -1375,7 +1375,7 @@ export default function SettingsPage() {
                 disabled={freeSaving}
                 className="text-xs h-7 px-3"
               >
-                {freeSaving ? 'Saving...' : 'Save changes'}
+                {freeSaving ? t('common.saving') : t('common.saveChanges')}
               </Button>
             </div>
           </form>
@@ -1387,10 +1387,10 @@ export default function SettingsPage() {
           <CardContent className="flex flex-col gap-4">
           <div>
             <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              Email Dispatch
+              {t('settings.emailTitle')}
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              Creates application drafts in your personal Gmail account for human review before sending.
+              {t('settings.emailDescription')}
             </p>
           </div>
 
@@ -1398,12 +1398,15 @@ export default function SettingsPage() {
           <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-900 flex items-start gap-2.5">
             <Mail className="size-4 text-blue-600 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
-              <span className="font-semibold text-blue-950">Zero-Config Email Dispatch Available:</span>
+              <span className="font-semibold text-blue-950">{t('settings.emailZeroTitle')}</span>
               <p className="text-xs text-blue-800 leading-relaxed">
-                Rorilo includes 1-click <strong>Open in Gmail</strong> (web compose) and <strong>Open in Mail App</strong> buttons on every job. You can open pre-filled drafts in your browser or desktop mail app with zero setup.
+                {richText(t('settings.emailZeroBody'), {
+                  gmail: <strong>{t('material.openGmail')}</strong>,
+                  mailapp: <strong>{t('material.openMailApp')}</strong>,
+                })}
               </p>
               <p className="text-xs text-blue-700 pt-0.5">
-                Optional: If you want background automated draft creation via the Gmail API, configure your Google Cloud credentials below.
+                {t('settings.emailZeroApi')}
               </p>
             </div>
           </div>
@@ -1411,7 +1414,7 @@ export default function SettingsPage() {
           <form onSubmit={handleSaveEmail} className="space-y-3.5" autoComplete="off">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="gmail-addr" className="text-sm font-medium text-neutral-700">Gmail Address</Label>
+                <Label htmlFor="gmail-addr" className="text-sm font-medium text-neutral-700">{t('settings.emailUserLabel')}</Label>
                 <Input
                   id="gmail-addr"
                   type="email"
@@ -1423,12 +1426,12 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="gmail-cid" className="text-sm font-medium text-neutral-700">Google OAuth Client ID</Label>
+                <Label htmlFor="gmail-cid" className="text-sm font-medium text-neutral-700">{t('settings.emailClientIdLabel')}</Label>
                 <Input
                   id="gmail-cid"
                   value={emailClientId}
                   onChange={(e) => setEmailClientId(e.target.value)}
-                  placeholder="Client ID..."
+                  placeholder={t('settings.emailClientIdPh')}
                   className="font-mono text-xs h-8"
                 />
               </div>
@@ -1437,10 +1440,10 @@ export default function SettingsPage() {
             <div className="space-y-1.5">
               <SecretInput
                 id="gmail-secret"
-                label="Client Secret"
+                label={t('settings.emailClientSecretLabel')}
                 value={emailClientSecret}
                 onChange={setEmailClientSecret}
-                placeholder="Client secret..."
+                placeholder={t('settings.emailClientSecretPh')}
                 fieldName="rorilo-gmail-secret"
               />
             </div>
@@ -1456,7 +1459,7 @@ export default function SettingsPage() {
                   className="text-xs h-7"
                 >
                   {emailTesting ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
-                  <span>Test mailbox</span>
+                  <span>{t('settings.emailTest')}</span>
                 </Button>
                 {emailTestResult && (
                   <span className="text-xs text-neutral-600 truncate max-w-xs">{emailTestResult}</span>
@@ -1473,7 +1476,7 @@ export default function SettingsPage() {
                   disabled={emailSaving}
                   className="text-xs h-7 px-3"
                 >
-                  {emailSaving ? 'Saving...' : 'Save changes'}
+                  {emailSaving ? t('common.saving') : t('common.saveChanges')}
                 </Button>
               </div>
             </div>
@@ -1486,10 +1489,10 @@ export default function SettingsPage() {
           <CardContent className="flex flex-col gap-4">
           <div>
             <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              Company Logos
+              {t('settings.logoTitle')}
             </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              Optional. Use a logo.dev publishable key that starts with pk_. Secret sk_ keys are for server APIs and cannot render image logos.
+              {t('settings.logoDescription')}
             </p>
             <a
               href="https://www.logo.dev/dashboard/api-keys"
@@ -1497,7 +1500,7 @@ export default function SettingsPage() {
               rel="noreferrer"
               className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-950 hover:underline"
             >
-              <span>Open Logo.dev dashboard</span>
+              <span>{t('settings.logoOpenDashboard')}</span>
               <ExternalLink className="size-3.5" />
             </a>
           </div>
@@ -1505,7 +1508,7 @@ export default function SettingsPage() {
           <form onSubmit={handleSaveLogo} className="flex flex-col gap-3.5" autoComplete="off">
             <SecretInput
               id="logo-token"
-              label="logo.dev Token"
+              label={t('settings.logoTokenLabel')}
               value={logoToken}
               onChange={setLogoToken}
               placeholder={hasLogoToken ? '•••••••••••••••• (Token saved. Leave blank to keep)' : 'pk_...'}
@@ -1513,7 +1516,7 @@ export default function SettingsPage() {
             />
             {hasLogoToken && logoKeyType !== 'publishable' && (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
-                The saved logo.dev key is not a publishable pk_ key, so logo images will be rejected. Paste the publishable key from the logo.dev playground.
+                {t('settings.logoKeyWarning')}
               </p>
             )}
 
@@ -1523,9 +1526,9 @@ export default function SettingsPage() {
                 <p className="text-xs text-neutral-500 leading-relaxed">
                   {hasLogoToken
                     ? logoKeyType === 'publishable'
-                      ? 'Live preview — if a logo shows here, job views will show them too.'
-                      : 'The saved key cannot load image logos. Replace it with a publishable key.'
-                    : 'Preview appears here once a token is saved. Until then, initials are shown.'}
+                      ? t('settings.logoPreviewReady')
+                      : t('settings.logoPreviewInvalid')
+                    : t('settings.logoPreviewEmpty')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1538,7 +1541,7 @@ export default function SettingsPage() {
                   disabled={logoSaving}
                   className="text-xs h-7 px-3"
                 >
-                  {logoSaving ? 'Saving...' : 'Save changes'}
+                  {logoSaving ? t('common.saving') : t('common.saveChanges')}
                 </Button>
               </div>
             </div>

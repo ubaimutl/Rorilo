@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/components/I18nProvider';
 
 interface SecretInputProps {
   id?: string;
@@ -35,6 +36,7 @@ export function SecretInput({
 }: SecretInputProps) {
   const generatedId = useId();
   const inputId = id || `secret-${generatedId.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const { t } = useI18n();
   const [visible, setVisible] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const locked = !unlocked && value === '';
@@ -70,7 +72,7 @@ export function SecretInput({
           onClick={() => setVisible((current) => !current)}
           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
           tabIndex={-1}
-          aria-label={visible ? `Hide ${label}` : `Show ${label}`}
+          aria-label={visible ? t('common.hide', { label }) : t('common.show', { label })}
         >
           {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
         </button>

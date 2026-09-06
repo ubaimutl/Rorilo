@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, Fragment, useContext, useEffect, useMemo, useState } from 'react';
 import { DEFAULT_LOCALE, normalizeLocale, translate, type Locale, type TranslationKey } from '@/lib/i18n';
 
 type I18nContextValue = {
@@ -49,4 +49,26 @@ export function useI18n() {
     throw new Error('useI18n must be used inside I18nProvider');
   }
   return context;
+}
+
+/**
+ * Renders a translation containing {placeholders} with React nodes,
+ * e.g. richText(t('key'), { gmail: <strong>...</strong> }).
+ */
+export function richText(
+  template: string,
+  parts: Record<string, React.ReactNode>
+): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const pattern = /\{(\w+)\}/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = pattern.exec(template)) !== null) {
+    if (match.index > lastIndex) out.push(template.slice(lastIndex, match.index));
+    out.push(<Fragment key={key++}>{parts[match[1]] ?? match[0]}</Fragment>);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < template.length) out.push(template.slice(lastIndex));
+  return out;
 }

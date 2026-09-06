@@ -125,12 +125,12 @@ export default function ProfilePage() {
         try {
           const structured = JSON.parse(data.activeCv.structuredData || "{}");
           const nextSummary = [
-            structured.currentTitle ? `Title: ${structured.currentTitle}` : null,
-            Array.isArray(structured.skills) ? `${structured.skills.length} skills` : null,
-            Array.isArray(structured.technologies) ? `${structured.technologies.length} technologies` : null,
-            Array.isArray(structured.languages) ? `${structured.languages.length} languages` : null,
-            Array.isArray(structured.workExperience) ? `${structured.workExperience.length} work entries` : null,
-            Array.isArray(structured.projects) ? `${structured.projects.length} projects` : null,
+            structured.currentTitle ? t('profile.cvSummaryTitle', { title: structured.currentTitle }) : null,
+            Array.isArray(structured.skills) ? t('profile.cvSummarySkills', { count: structured.skills.length }) : null,
+            Array.isArray(structured.technologies) ? t('profile.cvSummaryTech', { count: structured.technologies.length }) : null,
+            Array.isArray(structured.languages) ? t('profile.cvSummaryLang', { count: structured.languages.length }) : null,
+            Array.isArray(structured.workExperience) ? t('profile.cvSummaryWork', { count: structured.workExperience.length }) : null,
+            Array.isArray(structured.projects) ? t('profile.cvSummaryProjects', { count: structured.projects.length }) : null,
           ].filter(Boolean) as string[];
           setCvSummary(nextSummary);
         } catch {
@@ -165,21 +165,21 @@ export default function ProfilePage() {
       const res = await fetch("/api/cv/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (res.ok) {
-        setCvNotice(`Extracted and processed "${file.name}"`);
+        setCvNotice(t('profile.cvProcessedFile', { name: file.name }));
         if (data.summary) {
           setCvSummary([
-            data.summary.title ? `Title: ${data.summary.title}` : null,
-            `${data.summary.skills || 0} skills`,
-            `${data.summary.technologies || 0} technologies`,
-            `${data.summary.languages || 0} languages`,
-            `${data.summary.workExperience || 0} work entries`,
-            `${data.summary.projects || 0} projects`,
-            `${data.summary.links || 0} links`,
+            data.summary.title ? t('profile.cvSummaryTitle', { title: data.summary.title }) : null,
+            t('profile.cvSummarySkills', { count: data.summary.skills || 0 }),
+            t('profile.cvSummaryTech', { count: data.summary.technologies || 0 }),
+            t('profile.cvSummaryLang', { count: data.summary.languages || 0 }),
+            t('profile.cvSummaryWork', { count: data.summary.workExperience || 0 }),
+            t('profile.cvSummaryProjects', { count: data.summary.projects || 0 }),
+            t('profile.cvSummaryLinks', { count: data.summary.links || 0 }),
           ].filter(Boolean) as string[]);
         }
         await fetchProfile();
       } else {
-        alert(data.error || "Failed to parse CV");
+        alert(data.error || t("profile.cvParseFailed"));
       }
     } catch (err) {
       alert((err as Error).message);
@@ -202,23 +202,23 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setCvNotice("Processed pasted CV text successfully.");
+        setCvNotice(t('profile.cvProcessedPaste'));
         if (data.summary) {
           setCvSummary([
-            data.summary.title ? `Title: ${data.summary.title}` : null,
-            `${data.summary.skills || 0} skills`,
-            `${data.summary.technologies || 0} technologies`,
-            `${data.summary.languages || 0} languages`,
-            `${data.summary.workExperience || 0} work entries`,
-            `${data.summary.projects || 0} projects`,
-            `${data.summary.links || 0} links`,
+            data.summary.title ? t('profile.cvSummaryTitle', { title: data.summary.title }) : null,
+            t('profile.cvSummarySkills', { count: data.summary.skills || 0 }),
+            t('profile.cvSummaryTech', { count: data.summary.technologies || 0 }),
+            t('profile.cvSummaryLang', { count: data.summary.languages || 0 }),
+            t('profile.cvSummaryWork', { count: data.summary.workExperience || 0 }),
+            t('profile.cvSummaryProjects', { count: data.summary.projects || 0 }),
+            t('profile.cvSummaryLinks', { count: data.summary.links || 0 }),
           ].filter(Boolean) as string[]);
         }
         setPastedCvText("");
         setShowPasteBox(false);
         await fetchProfile();
       } else {
-        alert(data.error || "Failed to parse pasted CV text");
+        alert(data.error || t("profile.cvPasteParseFailed"));
       }
     } catch (err) {
       alert((err as Error).message);
@@ -309,7 +309,7 @@ export default function ProfilePage() {
         setTimeout(() => setSaveStatus(null), 2500);
       }
     } catch {
-      alert("Failed to save profile");
+      alert(t("profile.cvSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -319,7 +319,7 @@ export default function ProfilePage() {
     return (
       <div className="flex-1 flex items-center justify-center py-28 text-sm text-neutral-400 gap-2.5">
         <Loader2 className="size-4 animate-spin" />
-        Loading profile...
+        {t('profile.cvLoading')}
       </div>
     );
   }
@@ -343,10 +343,10 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col gap-4">
             <div>
               <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                Curriculum Vitae (CV)
+                {t('profile.cvTitle')}
               </h2>
               <p className="text-sm text-neutral-500 mt-1">
-                Upload your PDF resume or paste its plain text. Rorilo extracts skills and background locally to match jobs.
+                {t('profile.cvDescription')}
               </p>
             </div>
 
@@ -356,11 +356,11 @@ export default function ProfilePage() {
                 <FileText className="size-5 text-neutral-500 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-neutral-900 truncate">
-                    {activeCv?.originalFilename || "No CV active yet"}
+                    {activeCv?.originalFilename || t("profile.cvNoActive")}
                   </p>
                   {activeCv && (
                     <p className="text-xs text-neutral-400 mt-0.5">
-                      Uploaded {formatDate(activeCv.uploadDate)}
+                      {t('profile.cvUploaded', { date: formatDate(activeCv.uploadDate) })}
                     </p>
                   )}
                 </div>
@@ -386,15 +386,15 @@ export default function ProfilePage() {
               {/* Option 1: File Upload */}
               <div className="p-4 bg-neutral-50/70 border border-neutral-200 rounded-xl space-y-3 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-900">Option 1: Upload Resume File</h3>
+                  <h3 className="text-sm font-semibold text-neutral-900">{t('profile.cvOpt1')}</h3>
                   <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                    Select a PDF or plain text resume. Extracted cleanly without external workers.
+                    {t('profile.cvOpt1Hint')}
                   </p>
                 </div>
 
                 <label className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-neutral-300 bg-white hover:bg-neutral-50 text-xs font-semibold text-neutral-800 cursor-pointer transition-colors shadow-xs">
                   {uploadingCv ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-                  <span>{uploadingCv ? "Processing file..." : "Choose PDF / TXT File"}</span>
+                  <span>{uploadingCv ? t("profile.cvProcessing") : t("profile.cvChooseFile")}</span>
                   <input
                     type="file"
                     accept=".pdf,.txt,.md"
@@ -408,13 +408,13 @@ export default function ProfilePage() {
               {/* Option 2: Direct Text Paste */}
               <div className="p-4 bg-neutral-50/70 border border-neutral-200 rounded-xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-neutral-900">Option 2: Paste Resume Text</h3>
-                  <span className="text-xs text-neutral-400 font-medium">Direct fallback</span>
+                  <h3 className="text-sm font-semibold text-neutral-900">{t('profile.cvOpt2')}</h3>
+                  <span className="text-xs text-neutral-400 font-medium">{t('profile.cvDirectFallback')}</span>
                 </div>
                 <Textarea
                   value={pastedCvText}
                   onChange={(e) => setPastedCvText(e.target.value)}
-                  placeholder="Paste your CV or LinkedIn summary here..."
+                  placeholder={t('profile.cvPastePh')}
                   rows={4}
                   className="text-xs font-mono leading-relaxed bg-white"
                 />
@@ -426,7 +426,7 @@ export default function ProfilePage() {
                   className="w-full text-xs h-8"
                 >
                   {parsingPasted ? <Loader2 className="size-3 animate-spin mr-1.5" /> : <ClipboardPaste className="size-3.5 mr-1.5" />}
-                  <span>Save & Parse Pasted CV</span>
+                  <span>{t('profile.cvSaveParse')}</span>
                 </Button>
               </div>
             </div>
@@ -434,7 +434,7 @@ export default function ProfilePage() {
             {activeCv?.extractedText && (
               <details className="text-xs text-neutral-500">
                 <summary className="cursor-pointer font-medium hover:text-neutral-800">
-                  Inspect extracted CV text
+                  {t('profile.cvInspect')}
                 </summary>
                 <div className="mt-2 p-3 bg-neutral-50/70 border border-neutral-200 rounded-lg font-mono text-xs text-neutral-700 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
                   {activeCv.extractedText}
@@ -451,16 +451,16 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col gap-4">
             <div>
               <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                Personal Information
+                {t('profile.personalTitle')}
               </h2>
               <p className="text-sm text-neutral-500 mt-0.5">
-                Used in cover letters and application email drafts.
+                {t('profile.personalHint')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="prof-fn" className="text-sm font-medium text-neutral-700">First name</Label>
+                <Label htmlFor="prof-fn" className="text-sm font-medium text-neutral-700">{t('profile.firstName')}</Label>
                 <Input
                   id="prof-fn"
                   value={profile.firstName}
@@ -470,7 +470,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-ln" className="text-sm font-medium text-neutral-700">Last name</Label>
+                <Label htmlFor="prof-ln" className="text-sm font-medium text-neutral-700">{t('profile.lastName')}</Label>
                 <Input
                   id="prof-ln"
                   value={profile.lastName}
@@ -480,7 +480,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-em" className="text-sm font-medium text-neutral-700">Email</Label>
+                <Label htmlFor="prof-em" className="text-sm font-medium text-neutral-700">{t('profile.email')}</Label>
                 <Input
                   id="prof-em"
                   type="email"
@@ -491,7 +491,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-ph" className="text-sm font-medium text-neutral-700">Phone</Label>
+                <Label htmlFor="prof-ph" className="text-sm font-medium text-neutral-700">{t('profile.phone')}</Label>
                 <Input
                   id="prof-ph"
                   value={profile.phone}
@@ -501,18 +501,18 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-loc" className="text-sm font-medium text-neutral-700">Location</Label>
+                <Label htmlFor="prof-loc" className="text-sm font-medium text-neutral-700">{t('profile.location')}</Label>
                 <Input
                   id="prof-loc"
                   value={profile.city}
                   onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                  placeholder="City, Country"
+                  placeholder={t('profile.locationPh')}
                   className="text-sm h-9"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-li" className="text-sm font-medium text-neutral-700">LinkedIn</Label>
+                <Label htmlFor="prof-li" className="text-sm font-medium text-neutral-700">{t('profile.linkedIn')}</Label>
                 <Input
                   id="prof-li"
                   value={profile.linkedIn}
@@ -523,7 +523,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-gh" className="text-sm font-medium text-neutral-700">GitHub</Label>
+                <Label htmlFor="prof-gh" className="text-sm font-medium text-neutral-700">{t('profile.gitHub')}</Label>
                 <Input
                   id="prof-gh"
                   value={profile.gitHub}
@@ -534,7 +534,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-web" className="text-sm font-medium text-neutral-700">Portfolio</Label>
+                <Label htmlFor="prof-web" className="text-sm font-medium text-neutral-700">{t('profile.portfolio')}</Label>
                 <Input
                   id="prof-web"
                   value={profile.portfolio}
@@ -547,14 +547,14 @@ export default function ProfilePage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="prof-more-links" className="text-sm font-medium text-neutral-700">
-                More links
+                {t('profile.moreLinks')}
               </Label>
               <Textarea
                 id="prof-more-links"
                 value={profile.additionalUrlsStr}
                 onChange={(e) => setProfile({ ...profile, additionalUrlsStr: e.target.value })}
                 rows={3}
-                placeholder="One link per line: Behance, Xing, project pages, certificates..."
+                placeholder={t('profile.moreLinksPh')}
                 className="text-sm leading-relaxed"
               />
             </div>
@@ -568,27 +568,27 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col gap-4">
             <div>
               <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                Professional Background
+                {t('profile.bgTitle')}
               </h2>
               <p className="text-sm text-neutral-500 mt-0.5">
-                Core experience used for deterministic matching.
+                {t('profile.bgHint')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="prof-title" className="text-sm font-medium text-neutral-700">Current Title</Label>
+                <Label htmlFor="prof-title" className="text-sm font-medium text-neutral-700">{t('profile.currentTitle')}</Label>
                 <Input
                   id="prof-title"
                   value={profile.currentTitle}
                   onChange={(e) => setProfile({ ...profile, currentTitle: e.target.value })}
-                  placeholder="e.g. Senior Full-Stack Engineer"
+                  placeholder={t('profile.currentTitlePh')}
                   className="text-sm h-9"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="prof-exp" className="text-sm font-medium text-neutral-700">Years of Experience</Label>
+                <Label htmlFor="prof-exp" className="text-sm font-medium text-neutral-700">{t('profile.yearsExp')}</Label>
                 <Input
                   id="prof-exp"
                   type="number"
@@ -604,14 +604,14 @@ export default function ProfilePage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="prof-skills" className="text-sm font-medium text-neutral-700">
-                Verified Skills & Technologies (comma-separated)
+                {t('profile.skills')}
               </Label>
               <Textarea
                 id="prof-skills"
                 value={profile.skillsStr}
                 onChange={(e) => setProfile({ ...profile, skillsStr: e.target.value })}
                 rows={3}
-                placeholder="TypeScript, React, Next.js, Node.js, PostgreSQL, Docker..."
+                placeholder={t('profile.skillsPh')}
                 className="text-sm leading-relaxed"
               />
             </div>
@@ -625,29 +625,29 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col gap-4">
             <div>
               <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                Job Preferences
+                {t('profile.prefsTitle')}
               </h2>
               <p className="text-sm text-neutral-500 mt-0.5">
-                Filters and scoring weights applied to discovered job postings.
+                {t('profile.prefsHint')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="pref-titles" className="text-sm font-medium text-neutral-700">Target Roles (comma-separated)</Label>
+                <Label htmlFor="pref-titles" className="text-sm font-medium text-neutral-700">{t('profile.prefsTitles')}</Label>
                 <Input
                   id="pref-titles"
                   value={preferences.desiredTitlesStr}
                   onChange={(e) =>
                     setPreferences({ ...preferences, desiredTitlesStr: e.target.value })
                   }
-                  placeholder="Senior Software Engineer, Tech Lead..."
+                  placeholder={t('profile.prefsTitlesPh')}
                   className="text-sm h-9"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="pref-remote" className="text-sm font-medium text-neutral-700">Remote Preference</Label>
+                <Label htmlFor="pref-remote" className="text-sm font-medium text-neutral-700">{t('profile.prefsRemote')}</Label>
                 <select
                   id="pref-remote"
                   value={preferences.remotePreference}
@@ -656,15 +656,15 @@ export default function ProfilePage() {
                   }
                   className="h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm text-neutral-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 cursor-pointer"
                 >
-                  <option value="any">Any (Remote, Hybrid, Onsite)</option>
-                  <option value="remote">Strictly Remote</option>
-                  <option value="hybrid">Hybrid Friendly</option>
-                  <option value="onsite">Onsite Only</option>
+                  <option value="any">{t('discover.workplace.all')}</option>
+                  <option value="remote">{t('profile.prefsRemoteStrict')}</option>
+                  <option value="hybrid">{t('profile.prefsRemoteHybrid')}</option>
+                  <option value="onsite">{t('profile.prefsRemoteOnsite')}</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="pref-minsal" className="text-sm font-medium text-neutral-700">Minimum Annual Salary</Label>
+                <Label htmlFor="pref-minsal" className="text-sm font-medium text-neutral-700">{t('profile.prefsMinSalary')}</Label>
                 <Input
                   id="pref-minsal"
                   type="number"
@@ -672,13 +672,13 @@ export default function ProfilePage() {
                   onChange={(e) =>
                     setPreferences({ ...preferences, minSalary: parseFloat(e.target.value) || 0 })
                   }
-                  placeholder="e.g. 90000"
+                  placeholder={t('profile.prefsMinSalaryPh')}
                   className="text-sm h-9"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="pref-avoid" className="text-sm font-medium text-neutral-700">Technologies to Avoid</Label>
+                <Label htmlFor="pref-avoid" className="text-sm font-medium text-neutral-700">{t('profile.prefsAvoidTech')}</Label>
                 <Input
                   id="pref-avoid"
                   value={preferences.technologiesToAvoidStr}
@@ -688,13 +688,13 @@ export default function ProfilePage() {
                       technologiesToAvoidStr: e.target.value,
                     })
                   }
-                  placeholder="PHP, WordPress, Angular..."
+                  placeholder={t('profile.prefsAvoidTechPh')}
                   className="text-sm h-9"
                 />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="pref-blocked" className="text-sm font-medium text-neutral-700">Blocked companies</Label>
+                <Label htmlFor="pref-blocked" className="text-sm font-medium text-neutral-700">{t('profile.prefsBlocked')}</Label>
                 <Input
                   id="pref-blocked"
                   value={preferences.excludedCompaniesStr}
@@ -704,11 +704,11 @@ export default function ProfilePage() {
                       excludedCompaniesStr: e.target.value,
                     })
                   }
-                  placeholder="Acme Corp, /staffing.*gmbh/i ..."
+                  placeholder={t('profile.prefsBlockedPh')}
                   className="text-sm h-9"
                 />
                 <p className="text-xs text-neutral-500 leading-relaxed">
-                  Comma-separated names or /regex/ patterns. Matching listings are deleted on import, before you ever see them.
+                  {t('profile.prefsBlockedHint')}
                 </p>
               </div>
             </div>
@@ -722,37 +722,37 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col gap-4">
             <div>
               <h2 className="text-sm font-semibold text-neutral-900">
-                Application Writing
+                {t('profile.writingTitle')}
               </h2>
               <p className="text-sm text-neutral-500 mt-0.5">
-                Controls the language, tone, and personal context used in drafted materials.
+                {t('profile.writingHint')}
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="space-y-1.5 flex-1">
-                <Label htmlFor="pref-language" className="text-sm font-medium text-neutral-700">Cover letter language</Label>
+                <Label htmlFor="pref-language" className="text-sm font-medium text-neutral-700">{t('profile.writingCoverLang')}</Label>
                 <Input
                   id="pref-language"
                   value={preferences.coverLetterLanguage}
                   onChange={(e) =>
                     setPreferences({ ...preferences, coverLetterLanguage: e.target.value })
                   }
-                  placeholder="Auto, English, German, Spanish..."
+                  placeholder={t('profile.writingCoverLangPh')}
                   className="text-sm h-9"
                 />
-                <p className="text-xs text-neutral-500">Use Auto to follow the job posting language.</p>
+                <p className="text-xs text-neutral-500">{t('profile.writingAutoHint')}</p>
               </div>
 
               <div className="space-y-1.5 flex-1">
-                <Label htmlFor="pref-candidate-languages" className="text-sm font-medium text-neutral-700">Languages you can work in</Label>
+                <Label htmlFor="pref-candidate-languages" className="text-sm font-medium text-neutral-700">{t('profile.writingLanguages')}</Label>
                 <Input
                   id="pref-candidate-languages"
                   value={preferences.languagesStr}
                   onChange={(e) =>
                     setPreferences({ ...preferences, languagesStr: e.target.value })
                   }
-                  placeholder="English fluent, German B2..."
+                  placeholder={t('profile.writingLanguagesPh')}
                   className="text-sm h-9"
                 />
               </div>
@@ -760,7 +760,7 @@ export default function ProfilePage() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="space-y-1.5 flex-1">
-                <Label htmlFor="pref-tone" className="text-sm font-medium text-neutral-700">Tone</Label>
+                <Label htmlFor="pref-tone" className="text-sm font-medium text-neutral-700">{t('profile.writingTone')}</Label>
                 <select
                   id="pref-tone"
                   value={preferences.writingTone}
@@ -769,15 +769,15 @@ export default function ProfilePage() {
                   }
                   className="h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm text-neutral-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 cursor-pointer"
                 >
-                  <option value="professional">Professional</option>
-                  <option value="confident">Confident</option>
-                  <option value="concise">Concise</option>
-                  <option value="conversational">Conversational</option>
+                  <option value="professional">{t('profile.writingOptProfessional')}</option>
+                  <option value="confident">{t('profile.writingOptConfident')}</option>
+                  <option value="concise">{t('profile.writingOptConcise')}</option>
+                  <option value="conversational">{t('profile.writingOptConversational')}</option>
                 </select>
               </div>
 
               <div className="space-y-1.5 flex-1">
-                <Label htmlFor="pref-cover-length" className="text-sm font-medium text-neutral-700">Cover letter length</Label>
+                <Label htmlFor="pref-cover-length" className="text-sm font-medium text-neutral-700">{t('profile.writingCoverLength')}</Label>
                 <select
                   id="pref-cover-length"
                   value={preferences.coverLetterLength}
@@ -786,14 +786,14 @@ export default function ProfilePage() {
                   }
                   className="h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm text-neutral-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 cursor-pointer"
                 >
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="detailed">Detailed</option>
+                  <option value="short">{t('profile.writingOptShort')}</option>
+                  <option value="medium">{t('profile.writingOptMedium')}</option>
+                  <option value="detailed">{t('profile.writingOptDetailed')}</option>
                 </select>
               </div>
 
               <div className="space-y-1.5 flex-1">
-                <Label htmlFor="pref-email-length" className="text-sm font-medium text-neutral-700">Email length</Label>
+                <Label htmlFor="pref-email-length" className="text-sm font-medium text-neutral-700">{t('profile.writingEmailLength')}</Label>
                 <select
                   id="pref-email-length"
                   value={preferences.emailLength}
@@ -802,9 +802,9 @@ export default function ProfilePage() {
                   }
                   className="h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1.5 text-sm text-neutral-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 cursor-pointer"
                 >
-                  <option value="short">Short</option>
-                  <option value="concise">Concise</option>
-                  <option value="detailed">Detailed</option>
+                  <option value="short">{t('profile.writingOptShort')}</option>
+                  <option value="concise">{t('profile.writingOptConcise')}</option>
+                  <option value="detailed">{t('profile.writingOptDetailed')}</option>
                 </select>
               </div>
             </div>
@@ -819,7 +819,7 @@ export default function ProfilePage() {
                   }
                   className="size-4 rounded border-neutral-300"
                 />
-                Mention availability
+                {t('profile.writingMentionAvailability')}
               </label>
 
               <label className="flex items-center gap-2 text-sm text-neutral-700">
@@ -831,41 +831,41 @@ export default function ProfilePage() {
                   }
                   className="size-4 rounded border-neutral-300"
                 />
-                Mention salary when relevant
+                {t('profile.writingMentionSalary')}
               </label>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="pref-style" className="text-sm font-medium text-neutral-700">
-                Your writing style
+                {t('profile.writingStyle')}
               </Label>
               <Textarea
                 id="pref-style"
                 value={preferences.writingStyle}
                 onChange={(e) => setPreferences({ ...preferences, writingStyle: e.target.value })}
                 rows={3}
-                placeholder="Paste a short sample, or describe your style: direct, warm, no exaggeration, simple sentences..."
+                placeholder={t('profile.writingStylePh')}
                 className="text-sm leading-relaxed"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="pref-ai-notes" className="text-sm font-medium text-neutral-700">
-                Notes for the drafts
+                {t('profile.writingAiNotes')}
               </Label>
               <Textarea
                 id="pref-ai-notes"
                 value={preferences.aiNotes}
                 onChange={(e) => setPreferences({ ...preferences, aiNotes: e.target.value })}
                 rows={3}
-                placeholder="Anything the AI should know: relocation, visa, portfolio highlights, topics to avoid, preferred emphasis..."
+                placeholder={t('profile.writingAiNotesPh')}
                 className="text-sm leading-relaxed"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="pref-instructions" className="text-sm font-medium text-neutral-700">
-                Reusable instructions
+                {t('profile.writingInstructions')}
               </Label>
               <Textarea
                 id="pref-instructions"
@@ -874,7 +874,7 @@ export default function ProfilePage() {
                   setPreferences({ ...preferences, additionalInstructions: e.target.value })
                 }
                 rows={3}
-                placeholder="Always keep it factual, avoid buzzwords, emphasize product work..."
+                placeholder={t('profile.writingInstructionsPh')}
                 className="text-sm leading-relaxed"
               />
             </div>
@@ -888,7 +888,7 @@ export default function ProfilePage() {
               disabled={saving}
               className="text-sm h-9 px-5"
             >
-              {saving ? "Saving..." : "Save Profile"}
+              {saving ? t("common.saving") : t("profile.saveProfile")}
             </Button>
           </div>
         </form>

@@ -9,8 +9,10 @@ import { JobCard } from '@/components/JobCard';
 import { CompanyLogo } from '@/components/CompanyLogo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/components/I18nProvider';
 
 export default function CompanyPage() {
+  const { t } = useI18n();
   const params = useParams();
   const companyParam = params?.company as string;
   const [data, setData] = useState<any>(null);
@@ -25,7 +27,7 @@ export default function CompanyPage() {
       const res = await fetch(`/api/companies/${encodeURIComponent(decodeURIComponent(companyParam))}`);
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(payload.error || 'Could not load company.');
+        setError(payload.error || t('company.loadFailed'));
         return;
       }
       setData(payload);
@@ -34,7 +36,7 @@ export default function CompanyPage() {
     } finally {
       setLoading(false);
     }
-  }, [companyParam]);
+  }, [companyParam, t]);
 
   useEffect(() => {
     fetchCompany();
@@ -44,7 +46,7 @@ export default function CompanyPage() {
     return (
       <div className="flex-1 flex items-center justify-center gap-2 py-28 text-sm text-neutral-400">
         <Loader2 className="size-4 animate-spin" />
-        Loading company...
+        {t('company.loading')}
       </div>
     );
   }
@@ -52,9 +54,9 @@ export default function CompanyPage() {
   if (error || !data?.company) {
     return (
       <div className="flex-1 p-10 text-sm text-neutral-500">
-        {error || 'Company not found.'}{' '}
+        {error || t('company.notFound')}{' '}
         <Link href="/" className="font-medium text-neutral-900 underline">
-          Back to Discover
+          {t('company.back')}
         </Link>
       </div>
     );
@@ -62,19 +64,19 @@ export default function CompanyPage() {
 
   const company = data.company;
   const stats = [
-    { label: 'Jobs', value: company.stats.totalJobs, Icon: Building2 },
-    { label: 'Saved', value: company.stats.saved, Icon: BookmarkCheck },
-    { label: 'Prepared', value: company.stats.prepared, Icon: FileText },
-    { label: 'Applied', value: company.stats.applied, Icon: Send },
-    { label: 'Avg score', value: `${company.stats.averageScore}%`, Icon: Gauge },
+    { label: t('company.jobs'), value: company.stats.totalJobs, Icon: Building2 },
+    { label: t('company.saved'), value: company.stats.saved, Icon: BookmarkCheck },
+    { label: t('company.prepared'), value: company.stats.prepared, Icon: FileText },
+    { label: t('company.applied'), value: company.stats.applied, Icon: Send },
+    { label: t('company.avgScore'), value: `${company.stats.averageScore}%`, Icon: Gauge },
   ];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-background">
       <PageHeader
-        back={{ href: '/', label: 'Discover' }}
+        back={{ href: '/', label: t('discover.title') }}
         title={company.name}
-        description={`${company.stats.totalJobs} saved posting${company.stats.totalJobs === 1 ? '' : 's'} from this company`}
+        description={t('company.postings', { count: company.stats.totalJobs, plural: company.stats.totalJobs === 1 ? '' : 's' })}
         badge={
           <CompanyLogo
             company={company.name}
@@ -91,7 +93,7 @@ export default function CompanyPage() {
               rel="noreferrer"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:text-neutral-950"
             >
-              <span>Website</span>
+              <span>{t('company.website')}</span>
               <ExternalLink className="size-3.5" />
             </a>
           )
@@ -121,8 +123,8 @@ export default function CompanyPage() {
         {(company.sourceLabels?.length > 0 || company.sourceLinks?.length > 0) && (
           <Card>
             <CardHeader>
-              <CardTitle>Source coverage</CardTitle>
-              <CardDescription>Useful when the same company appears through several actors or boards.</CardDescription>
+              <CardTitle>{t('company.sourceTitle')}</CardTitle>
+              <CardDescription>{t('company.sourceHint')}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {company.sourceLabels?.length > 0 && (

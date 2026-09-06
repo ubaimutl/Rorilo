@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScoreRing, displayMatchScore, isAiCalibrated } from '@/components/ScoreRing';
 import { CompanyLogo } from '@/components/CompanyLogo';
+import { useI18n } from '@/components/I18nProvider';
 
 export interface JobCardProps {
   job: {
@@ -58,6 +59,7 @@ function companyHref(company: string) {
 }
 
 export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelectToggle }: JobCardProps) {
+  const { t } = useI18n();
   const isSaved = job.application?.status === 'SAVED';
 
   const strongMatches = parseJsonArray(job.match?.strongMatches);
@@ -90,7 +92,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
     e.preventDefault();
     e.stopPropagation();
 
-    const shouldDelete = window.confirm(`Delete "${job.title}" at ${job.company}?`);
+    const shouldDelete = window.confirm(t('jobcard.deleteConfirm', { title: job.title, company: job.company }));
     if (!shouldDelete) return;
 
     try {
@@ -115,11 +117,11 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
   const triageStatus = job.match?.triageStatus || 'UNREVIEWED';
   const triageConfig =
     triageStatus === 'WORTH_APPLYING'
-      ? { label: 'Worth applying', Icon: Check, className: 'border-neutral-800 bg-neutral-900 text-emerald-400' }
+      ? { label: t('jobcard.triageWorth'), Icon: Check, className: 'border-neutral-800 bg-neutral-900 text-emerald-400' }
       : triageStatus === 'MAYBE'
-      ? { label: 'Maybe', Icon: Clock, className: 'border-neutral-800 bg-neutral-900 text-amber-400' }
+      ? { label: t('jobcard.triageMaybe'), Icon: Clock, className: 'border-neutral-800 bg-neutral-900 text-amber-400' }
       : triageStatus === 'SKIP'
-      ? { label: 'Skip', Icon: X, className: 'border-neutral-800 bg-neutral-900 text-red-400' }
+      ? { label: t('jobcard.triageSkip'), Icon: X, className: 'border-neutral-800 bg-neutral-900 text-red-400' }
       : null;
 
   let salaryStr = '';
@@ -136,10 +138,10 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
     job.location,
     job.remoteType !== 'unknown'
       ? job.remoteType === 'remote'
-        ? 'Remote'
+        ? t('discover.workplace.remote')
         : job.remoteType === 'hybrid'
-        ? 'Hybrid'
-        : 'Onsite'
+        ? t('discover.workplace.hybrid')
+        : t('discover.workplace.onsite')
       : null,
   ].filter(Boolean);
 
@@ -163,7 +165,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
               checked={selected}
               onChange={handleSelect}
               onClick={(e) => e.stopPropagation()}
-              aria-label={`Select ${job.title}`}
+              aria-label={t('jobcard.select', { title: job.title })}
               className="size-4 rounded-md border-neutral-300 cursor-pointer"
             />
           </div>
@@ -222,7 +224,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
             </Badge>
           ))}
           {techs.length > 3 && (
-            <span className="text-xs text-neutral-400">+{techs.length - 3} more</span>
+            <span className="text-xs text-neutral-400">{t('jobcard.moreTech', { count: techs.length - 3 })}</span>
           )}
         </div>
       </div>
@@ -253,19 +255,19 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
           <div className="space-y-1">
             {strongMatches.length > 0 && (
               <p className="line-clamp-1">
-                <span className="text-neutral-500 font-medium">Strong match for </span>
+                <span className="text-neutral-500 font-medium">{t('jobcard.strongMatchFor')}</span>
                 <span className="text-neutral-800 font-medium">{strongMatches.slice(0, 4).join(', ')}</span>.
               </p>
             )}
             {missingSkills.length > 0 && (
               <p className="line-clamp-1">
-                <span className="text-neutral-500 font-medium">Missing: </span>
+                <span className="text-neutral-500 font-medium">{t('jobcard.missing')}</span>
                 <span className="text-neutral-700">{missingSkills.slice(0, 3).join(', ')}</span>.
               </p>
             )}
             {possibleIssues.length > 0 && (
               <p className="text-neutral-500 line-clamp-1">
-                <span className="font-medium text-neutral-600">Note: </span>
+                <span className="font-medium text-neutral-600">{t('jobcard.note')}</span>
                 {possibleIssues[0]}
               </p>
             )}
@@ -278,12 +280,12 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
       <div className="mt-4 flex items-center justify-between gap-2 text-sm pt-1">
         <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-400 min-w-0">
           <span className="shrink-0">
-            Viewed {job.viewCount || 0} {job.viewCount === 1 ? 'time' : 'times'}
+            {t('jobcard.viewed', { count: job.viewCount || 0, unit: t(job.viewCount === 1 ? 'jobcard.time' : 'jobcard.times') })}
           </span>
           {job.application?.status && job.application.status !== 'NEW' && (
             <>
               <span className="text-neutral-300">·</span>
-              <span>Status: <strong className="font-medium text-neutral-600 lowercase">{job.application.status.replace('_', ' ')}</strong></span>
+              <span>{t('jobcard.status')}<strong className="font-medium text-neutral-600 lowercase">{job.application.status.replace('_', ' ')}</strong></span>
             </>
           )}
         </div>
@@ -292,7 +294,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
           <button
             onClick={handleSave}
             className="text-neutral-400 hover:text-neutral-700 p-1.5 rounded-full hover:bg-muted transition-colors cursor-pointer"
-            title={isSaved ? 'Remove from saved' : 'Save role'}
+            title={isSaved ? t('jobcard.unsave') : t('jobcard.save')}
           >
             {isSaved ? (
               <BookmarkCheck className="size-4.5 text-neutral-900" />
@@ -303,7 +305,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
           <button
             onClick={handleDelete}
             className="text-neutral-400 hover:text-red-600 p-1.5 rounded-full hover:bg-muted transition-colors cursor-pointer"
-            title="Delete job"
+            title={t('jobcard.delete')}
           >
             <Trash2 className="size-4.5" />
           </button>
@@ -311,7 +313,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
             href={`/jobs/${job.id}`}
             className="font-semibold text-neutral-900 hover:text-neutral-600 flex items-center gap-1.5 transition-colors text-sm ml-1"
           >
-            <span>View</span>
+            <span>{t('jobcard.view')}</span>
             <ArrowRight className="size-3.5" />
           </Link>
         </div>

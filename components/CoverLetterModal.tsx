@@ -55,7 +55,7 @@ export function CoverLetterModal({
     setIsSaving(true);
     try {
       const res = await fetch('/api/documents', {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId, content }),
       });
@@ -87,8 +87,8 @@ export function CoverLetterModal({
     downloadCoverLetterPdf(pdfData, `Cover_Letter_${companyName.replace(/\s+/g, '_')}.pdf`);
     notify({
       type: 'success',
-      title: 'PDF download started',
-      message: 'Check your Downloads folder.',
+      title: t('coverletter.pdfStarted'),
+      message: t('coverletter.pdfHint'),
     });
   };
 
@@ -102,7 +102,7 @@ export function CoverLetterModal({
               <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Cover Letter Review & PDF Export</h2>
+              <h2 className="text-sm font-semibold text-slate-900">{t('coverletter.title')}</h2>
               <p className="text-xs text-slate-500">
                 {companyName} • {jobTitle}
               </p>
@@ -119,8 +119,8 @@ export function CoverLetterModal({
         {/* Body / Text Editor */}
         <div className="p-6 flex-1 overflow-y-auto">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-700">Editable Document Text</span>
-            <span className="text-xs text-slate-400">Edit before generating PDF</span>
+            <span className="text-xs font-semibold text-slate-700">{t('coverletter.editable')}</span>
+            <span className="text-xs text-slate-400">{t('coverletter.editHint')}</span>
           </div>
           <textarea
             value={content}
@@ -138,7 +138,7 @@ export function CoverLetterModal({
               className="text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied' : 'Copy Text'}</span>
+              <span>{copied ? t('material.copied') : t('material.copyText')}</span>
             </button>
             {documentId && (
               <button
@@ -147,7 +147,7 @@ export function CoverLetterModal({
                 className="text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Saving...' : saveMessage || 'Save Changes'}</span>
+                <span>{isSaving ? t('common.saving') : saveMessage || t('common.saveChanges')}</span>
               </button>
             )}
           </div>
@@ -156,12 +156,12 @@ export function CoverLetterModal({
             <select
               value={template}
               onChange={(e) => setTemplate(e.target.value as any)}
-              aria-label="Cover letter template"
+              aria-label={t('coverletter.templateAria')}
               className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 outline-none cursor-pointer shadow-xs"
             >
               {COVER_LETTER_TEMPLATES.map((tmpl) => (
                 <option key={tmpl.id} value={tmpl.id}>
-                  {tmpl.name} ({tmpl.tagline})
+                  {tmpl.name}
                 </option>
               ))}
             </select>
@@ -170,14 +170,14 @@ export function CoverLetterModal({
               onClick={onClose}
               className="text-xs font-medium text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg"
             >
-              Done
+              {t('common.done')}
             </button>
             <button
               onClick={handleDownloadPdf}
               className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download PDF</span>
+              <span>{t('material.downloadPdf')}</span>
             </button>
           </div>
         </div>

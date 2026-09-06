@@ -7,6 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(root, 'src-tauri', 'resources', 'server');
 const standaloneDir = path.join(root, '.next', 'standalone');
 const schemaOut = path.join(root, 'src-tauri', 'resources', 'schema.sql');
+const prismaCli = path.join(root, 'node_modules', 'prisma', 'build', 'index.js');
 
 async function exists(target) {
   try {
@@ -45,9 +46,9 @@ await copyIfExists(path.join(root, 'node_modules', '.prisma'), path.join(outDir,
 await rm(schemaOut, { force: true });
 
 const diff = spawnSync(
-  process.platform === 'win32' ? 'npx.cmd' : 'npx',
+  process.execPath,
   [
-    'prisma',
+    prismaCli,
     'migrate',
     'diff',
     '--from-empty',
@@ -60,8 +61,9 @@ const diff = spawnSync(
   { cwd: root, encoding: 'utf8' }
 );
 
-if (diff.status !== 0) {
-  throw new Error(diff.stderr || diff.stdout || 'Could not generate desktop database schema.');
+if (diff.error || diff.status !== 0) {
+  const details = [diff.error?.message, diff.stderr, diff.stdout].filter(Boolean).join('\n').trim();
+  throw new Error(details || `Could not generate desktop database schema. Exit status: ${diff.status}`);
 }
 
 const schemaStats = await stat(schemaOut);

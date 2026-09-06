@@ -1,3 +1,5 @@
+import type { TranslationKey } from '../i18n';
+
 export type CountryOption = {
   code: string;
   name: string;
@@ -96,9 +98,13 @@ export function sourceCoverageLabel(coverage: SourceCoverage | undefined, countr
   return 'other';
 }
 
-export function sourceCoverageGroupTitle(priority: number, country?: string | null): string {
-  if (priority === 0) return 'Global';
+export function sourceCoverageGroupTitle(
+  priority: number,
+  country?: string | null,
+  t: (key: TranslationKey) => string = (key) => key
+): string {
+  if (priority === 0) return t('sources.global');
   if (priority === 1) return countryName(country);
-  if (priority === 2) return countryRegion(country) || 'Regional';
-  return 'Other countries';
+  if (priority === 2) return countryRegion(country) || t('sources.regional');
+  return t('sources.otherCountries');
 }

@@ -31,16 +31,17 @@ import { orderFreeSources } from '@/lib/job-sources/free';
 import { COUNTRY_OPTIONS, sourceCoverageGroupTitle, sourceCoverageLabel, sourceCoveragePriority } from '@/lib/job-sources/countries';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/components/I18nProvider';
+import type { TranslationKey } from '@/lib/i18n';
 
 type StepId = 'ai' | 'cv' | 'profile' | 'writing' | 'sources' | 'dispatch';
 
-const STEPS: Array<{ id: StepId; title: string; hint: string; icon: React.ElementType }> = [
-  { id: 'ai', title: 'AI Provider', hint: 'model and key', icon: KeyRound },
-  { id: 'cv', title: 'CV', hint: 'upload or paste', icon: FileText },
-  { id: 'profile', title: 'Profile', hint: 'contact basics', icon: User },
-  { id: 'writing', title: 'Preferences', hint: 'targets and style', icon: Settings },
-  { id: 'sources', title: 'Sources', hint: 'where to search', icon: Search },
-  { id: 'dispatch', title: 'Finish', hint: 'optional email', icon: Mail },
+const STEPS: Array<{ id: StepId; titleKey: TranslationKey; hintKey: TranslationKey; icon: React.ElementType }> = [
+  { id: 'ai', titleKey: 'setup.stepAiTitle', hintKey: 'setup.stepAiHint', icon: KeyRound },
+  { id: 'cv', titleKey: 'setup.stepCvTitle', hintKey: 'setup.stepCvHint', icon: FileText },
+  { id: 'profile', titleKey: 'setup.stepProfileTitle', hintKey: 'setup.stepProfileHint', icon: User },
+  { id: 'writing', titleKey: 'setup.stepWritingTitle', hintKey: 'setup.stepWritingHint', icon: Settings },
+  { id: 'sources', titleKey: 'setup.stepSourcesTitle', hintKey: 'setup.stepSourcesHint', icon: Search },
+  { id: 'dispatch', titleKey: 'setup.stepDispatchTitle', hintKey: 'setup.stepDispatchHint', icon: Mail },
 ];
 
 const SETUP_AREA_STEPS = STEPS.filter((step) => step.id !== 'dispatch');
@@ -279,7 +280,7 @@ export default function SetupPage() {
         },
       }),
     });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not save AI settings');
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || t('setup.errAi'));
     patch({ hasAiKey: state.hasAiKey || Boolean(state.aiApiKey), aiApiKey: '' });
   };
 
@@ -298,7 +299,7 @@ export default function SetupPage() {
       });
     }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Could not process CV');
+    if (!res.ok) throw new Error(data.error || t('setup.errCv'));
     patch({
       cvText: '',
       cvFile: null,
@@ -348,7 +349,7 @@ export default function SetupPage() {
         },
       }),
     });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not save profile');
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || t('setup.errProfile'));
   };
 
   const saveSources = async () => {
@@ -363,7 +364,7 @@ export default function SetupPage() {
         },
       }),
     });
-    if (!apifyRes.ok) throw new Error((await apifyRes.json().catch(() => ({}))).error || 'Could not save Apify settings');
+    if (!apifyRes.ok) throw new Error((await apifyRes.json().catch(() => ({}))).error || t('setup.errApify'));
 
     const freeRes = await fetch('/api/settings', {
       method: 'POST',
@@ -378,7 +379,7 @@ export default function SetupPage() {
         },
       }),
     });
-    if (!freeRes.ok) throw new Error((await freeRes.json().catch(() => ({}))).error || 'Could not save free sources');
+    if (!freeRes.ok) throw new Error((await freeRes.json().catch(() => ({}))).error || t('setup.errFree'));
 
     if (state.logoToken.trim()) {
       const logoRes = await fetch('/api/settings', {
@@ -391,7 +392,7 @@ export default function SetupPage() {
           },
         }),
       });
-      if (!logoRes.ok) throw new Error((await logoRes.json().catch(() => ({}))).error || 'Could not save Logo.dev settings');
+      if (!logoRes.ok) throw new Error((await logoRes.json().catch(() => ({}))).error || t('setup.errLogo'));
     }
 
     patch({
@@ -422,7 +423,7 @@ export default function SetupPage() {
       const data = await res.json().catch(() => ({}));
       setLogoTestResult({
         success: Boolean(data.success),
-        message: data.message || (res.ok ? 'Logo.dev test completed.' : 'Logo.dev test failed.'),
+        message: data.message || (res.ok ? t('setup.logoTestOk') : t('setup.logoTestFailed')),
       });
     } catch (err) {
       setLogoTestResult({ success: false, message: (err as Error).message });
@@ -445,7 +446,7 @@ export default function SetupPage() {
         },
       }),
     });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Could not save email settings');
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || t('setup.errEmail'));
     patch({ emailClientId: '', emailClientSecret: '' });
   };
 
@@ -536,7 +537,7 @@ export default function SetupPage() {
                     )}
                   >
                     {complete && !active ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
-                    <span className="font-medium">{item.title}</span>
+                    <span className="font-medium">{t(item.titleKey)}</span>
                   </button>
                 );
               })}
@@ -546,15 +547,15 @@ export default function SetupPage() {
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-xs">
           <div className="mb-5 flex flex-col gap-1">
-            <h2 className="text-lg font-semibold text-neutral-950">{step.title}</h2>
-            <p className="text-sm text-neutral-500">{step.hint}</p>
+            <h2 className="text-lg font-semibold text-neutral-950">{t(step.titleKey)}</h2>
+            <p className="text-sm text-neutral-500">{t(step.hintKey)}</p>
           </div>
 
           {step.id === 'ai' && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 sm:flex-row">
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="ai-base">Base URL</Label>
+                  <Label htmlFor="ai-base">{t('settings.aiBaseLabel')}</Label>
                   <Input id="ai-base" value={state.aiBaseUrl} onChange={(e) => patch({ aiBaseUrl: e.target.value })} />
                 </div>
                 <div className="flex-1 space-y-1.5">
@@ -570,20 +571,20 @@ export default function SetupPage() {
               </div>
               <SecretInput
                 id="ai-key"
-                label="API key"
+                label={t('settings.aiKeyLabel')}
                 value={state.aiApiKey}
                 onChange={(value) => patch({ aiApiKey: value })}
-                placeholder={state.hasAiKey ? 'Key saved. Leave blank to keep it.' : 'sk-...'}
+                placeholder={state.hasAiKey ? t('common.keyKept') : 'sk-...'}
                 fieldName="rorilo-setup-ai-key"
               />
               <details className="rounded-xl border border-border bg-muted/60">
                 <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-neutral-700">
-                  <span>Advanced provider options</span>
+                  <span>{t('settings.aiAdvanced')}</span>
                   <Info className="size-4 text-neutral-400" />
                 </summary>
                 <div className="flex flex-col gap-3 border-t border-border px-3 py-3">
                   <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-                    Use this only if your model spends the answer on reasoning or your provider needs special OpenAI-compatible fields. These options apply to structured JSON tasks.
+                    {t('setup.aiAdvancedNote')}
                   </p>
                   <label className="flex items-start gap-2 text-sm text-neutral-700">
                     <input
@@ -593,8 +594,8 @@ export default function SetupPage() {
                       className="mt-1 size-3.5 rounded border-neutral-300 text-neutral-900"
                     />
                     <span>
-                      <span className="font-medium text-neutral-900">Structured output mode</span>
-                      <span className="block text-xs text-neutral-500">Adds JSON mode when the provider supports `response_format`.</span>
+                      <span className="font-medium text-neutral-900">{t('settings.aiStructured')}</span>
+                      <span className="block text-xs text-neutral-500">{t('settings.aiStructuredHint')}</span>
                     </span>
                   </label>
                   <label className="flex items-start gap-2 text-sm text-neutral-700">
@@ -605,12 +606,12 @@ export default function SetupPage() {
                       className="mt-1 size-3.5 rounded border-neutral-300 text-neutral-900"
                     />
                     <span>
-                      <span className="font-medium text-neutral-900">Disable reasoning for JSON tasks</span>
-                      <span className="block text-xs text-neutral-500">Uses known switches for DeepSeek, Ollama, and Qwen when possible.</span>
+                      <span className="font-medium text-neutral-900">{t('settings.aiReasoning')}</span>
+                      <span className="block text-xs text-neutral-500">{t('settings.aiReasoningHint')}</span>
                     </span>
                   </label>
                   <div className="space-y-1.5">
-                    <Label htmlFor="setup-provider-options">Raw extra request JSON</Label>
+                    <Label htmlFor="setup-provider-options">{t('settings.aiRawJson')}</Label>
                     <Textarea
                       id="setup-provider-options"
                       value={state.aiProviderOptionsJson}
@@ -630,14 +631,14 @@ export default function SetupPage() {
               {state.activeCvName && (
                 <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
                   <Check className="size-4" />
-                  Active CV: {state.activeCvName}
+                  {t('setup.cvActive', { name: state.activeCvName })}
                 </div>
               )}
               <div className="flex flex-col gap-4 sm:flex-row">
                 <label className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center hover:bg-neutral-100">
                   <Upload className="size-5 text-neutral-500" />
-                  <span className="text-sm font-semibold text-neutral-900">{state.cvFileName || 'Choose PDF / TXT / MD'}</span>
-                  <span className="text-xs text-neutral-500">The file is parsed when you save this step.</span>
+                  <span className="text-sm font-semibold text-neutral-900">{state.cvFileName || t('setup.cvChoose')}</span>
+                  <span className="text-xs text-neutral-500">{t('setup.cvParsedHint')}</span>
                   <input
                     type="file"
                     accept=".pdf,.txt,.md"
@@ -649,12 +650,12 @@ export default function SetupPage() {
                   />
                 </label>
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="cv-paste">Or paste CV text</Label>
+                  <Label htmlFor="cv-paste">{t('setup.cvPasteLabel')}</Label>
                   <Textarea
                     id="cv-paste"
                     value={state.cvText}
                     onChange={(e) => patch({ cvText: e.target.value, cvFile: null, cvFileName: '' })}
-                    placeholder="Paste your CV text here..."
+                    placeholder={t('setup.cvPastePh')}
                     className="min-h-40"
                   />
                 </div>
@@ -665,17 +666,17 @@ export default function SetupPage() {
           {step.id === 'profile' && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="First name" value={state.firstName} onChange={(value) => patch({ firstName: value })} />
-                <Field label="Last name" value={state.lastName} onChange={(value) => patch({ lastName: value })} />
+                <Field label={t('profile.firstName')} value={state.firstName} onChange={(value) => patch({ firstName: value })} />
+                <Field label={t('profile.lastName')} value={state.lastName} onChange={(value) => patch({ lastName: value })} />
               </div>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="Email" value={state.email} onChange={(value) => patch({ email: value })} />
-                <Field label="Phone" value={state.phone} onChange={(value) => patch({ phone: value })} />
+                <Field label={t('profile.email')} value={state.email} onChange={(value) => patch({ email: value })} />
+                <Field label={t('profile.phone')} value={state.phone} onChange={(value) => patch({ phone: value })} />
               </div>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="City" value={state.city} onChange={(value) => patch({ city: value })} />
+                <Field label={t('setup.profileCity')} value={state.city} onChange={(value) => patch({ city: value })} />
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="setup-country">Country</Label>
+                  <Label htmlFor="setup-country">{t('search.country')}</Label>
                   <select
                     id="setup-country"
                     value={state.country}
@@ -689,13 +690,13 @@ export default function SetupPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="LinkedIn" value={state.linkedIn} onChange={(value) => patch({ linkedIn: value })} />
-                <Field label="GitHub" value={state.gitHub} onChange={(value) => patch({ gitHub: value })} />
-                <Field label="Portfolio" value={state.portfolio} onChange={(value) => patch({ portfolio: value })} />
+                <Field label={t('profile.linkedIn')} value={state.linkedIn} onChange={(value) => patch({ linkedIn: value })} />
+                <Field label={t('profile.gitHub')} value={state.gitHub} onChange={(value) => patch({ gitHub: value })} />
+                <Field label={t('profile.portfolio')} value={state.portfolio} onChange={(value) => patch({ portfolio: value })} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="setup-links">More links</Label>
-                <Textarea id="setup-links" value={state.additionalUrls} onChange={(e) => patch({ additionalUrls: e.target.value })} placeholder="One link per line" />
+                <Label htmlFor="setup-links">{t('profile.moreLinks')}</Label>
+                <Textarea id="setup-links" value={state.additionalUrls} onChange={(e) => patch({ additionalUrls: e.target.value })} placeholder={t('setup.linksPh')} />
               </div>
             </div>
           )}
@@ -703,28 +704,28 @@ export default function SetupPage() {
           {step.id === 'writing' && (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="Current title" value={state.currentTitle} onChange={(value) => patch({ currentTitle: value })} />
+                <Field label={t('profile.currentTitle')} value={state.currentTitle} onChange={(value) => patch({ currentTitle: value })} />
                 <div className="flex-1 space-y-1.5">
-                  <Label htmlFor="setup-years">Years experience</Label>
+                  <Label htmlFor="setup-years">{t('setup.yearsExp')}</Label>
                   <Input id="setup-years" type="number" min={0} step={0.5} value={state.yearsExperience} onChange={(e) => patch({ yearsExperience: Number(e.target.value) || 0 })} />
                 </div>
               </div>
-              <Field label="Target titles" value={state.desiredTitles} onChange={(value) => patch({ desiredTitles: value })} placeholder="Frontend Developer, Data Entry, Office Assistant" />
-              <Field label="Skills" value={state.skills} onChange={(value) => patch({ skills: value })} placeholder="React, TypeScript, Excel, SAP" />
-              <Field label="Languages" value={state.languages} onChange={(value) => patch({ languages: value })} placeholder="German B2, English B2" />
+              <Field label={t('setup.writingTitles')} value={state.desiredTitles} onChange={(value) => patch({ desiredTitles: value })} placeholder={t('setup.writingTitlesPh')} />
+              <Field label={t('setup.writingSkills')} value={state.skills} onChange={(value) => patch({ skills: value })} placeholder={t('setup.writingSkillsPh')} />
+              <Field label={t('setup.writingLanguages')} value={state.languages} onChange={(value) => patch({ languages: value })} placeholder={t('setup.writingLanguagesPh')} />
               <div className="flex flex-col gap-4 sm:flex-row">
-                <SelectField label="Remote preference" value={state.remotePreference} onChange={(value) => patch({ remotePreference: value })} options={['any', 'remote', 'hybrid', 'onsite']} />
-                <Field label="Salary currency" value={state.salaryCurrency} onChange={(value) => patch({ salaryCurrency: value })} />
-                <Field label="Draft language" value={state.coverLetterLanguage} onChange={(value) => patch({ coverLetterLanguage: value })} placeholder="Auto" />
+                <SelectField label={t('profile.prefsRemote')} value={state.remotePreference} onChange={(value) => patch({ remotePreference: value })} options={['any', 'remote', 'hybrid', 'onsite']} />
+                <Field label={t('setup.writingSalaryCurrency')} value={state.salaryCurrency} onChange={(value) => patch({ salaryCurrency: value })} />
+                <Field label={t('setup.writingDraftLang')} value={state.coverLetterLanguage} onChange={(value) => patch({ coverLetterLanguage: value })} placeholder={t('setup.writingDraftLangAuto')} />
               </div>
-              <Field label="Companies to ignore" value={state.excludedCompanies} onChange={(value) => patch({ excludedCompanies: value })} placeholder="Company names separated by commas" />
+              <Field label={t('setup.writingExcluded')} value={state.excludedCompanies} onChange={(value) => patch({ excludedCompanies: value })} placeholder={t('setup.writingExcludedPh')} />
               <div className="space-y-1.5">
-                <Label htmlFor="setup-style">Writing style and notes</Label>
-                <Textarea id="setup-style" value={state.writingStyle} onChange={(e) => patch({ writingStyle: e.target.value })} placeholder="Paste a short sample or describe how applications should sound." />
+                <Label htmlFor="setup-style">{t('setup.writingStyleNotes')}</Label>
+                <Textarea id="setup-style" value={state.writingStyle} onChange={(e) => patch({ writingStyle: e.target.value })} placeholder={t('setup.writingStylePh')} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="setup-notes">Private notes for drafting</Label>
-                <Textarea id="setup-notes" value={state.aiNotes} onChange={(e) => patch({ aiNotes: e.target.value })} placeholder="Anything the draft should consider but not blindly repeat." />
+                <Label htmlFor="setup-notes">{t('setup.writingNotes')}</Label>
+                <Textarea id="setup-notes" value={state.aiNotes} onChange={(e) => patch({ aiNotes: e.target.value })} placeholder={t('setup.writingNotesPh')} />
               </div>
             </div>
           )}
@@ -733,15 +734,15 @@ export default function SetupPage() {
             <div className="flex flex-col gap-5">
               <SecretInput
                 id="setup-apify-token"
-                label="Apify token"
+                label={t('settings.apifyTokenLabel')}
                 value={state.apifyToken}
                 onChange={(value) => patch({ apifyToken: value })}
-                placeholder={state.hasApifyToken ? 'Token saved. Leave blank to keep it.' : 'apify_api_...'}
+                placeholder={state.hasApifyToken ? t('common.tokenKept') : 'apify_api_...'}
                 fieldName="rorilo-setup-apify-token"
               />
 
               <div className="space-y-2">
-                <Label>Apify actors</Label>
+                <Label>{t('setup.sourcesApifyActors')}</Label>
                 <div className="flex flex-wrap gap-2">
                   {orderApifyPicker(KNOWN_JOB_SOURCES, state.country).map((source) => {
                     const active = state.apifyActorIds.includes(source.actorId);
@@ -765,7 +766,7 @@ export default function SetupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Free sources</Label>
+                <Label>{t('settings.freeTitle')}</Label>
                 <div className="flex flex-col gap-3">
                   {[0, 1, 2, 3].map((priority) => {
                     const sources = orderFreeSources(state.country).filter((source) =>
@@ -774,7 +775,7 @@ export default function SetupPage() {
                     if (sources.length === 0) return null;
                     return (
                     <div key={priority} className="flex flex-wrap items-center gap-2">
-                      <span className="w-full text-xs font-medium text-neutral-500 sm:w-28">{sourceCoverageGroupTitle(priority, state.country)}</span>
+                      <span className="w-full text-xs font-medium text-neutral-500 sm:w-28">{sourceCoverageGroupTitle(priority, state.country, t)}</span>
                       {sources.map((source) => {
                           const active = state.freeEnabled.includes(source.id);
                           const coverageLabel = sourceCoverageLabel(source.coverage, state.country);
@@ -800,9 +801,9 @@ export default function SetupPage() {
               </div>
 
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="Adzuna App ID" value={state.adzunaAppId} onChange={(value) => patch({ adzunaAppId: value })} />
-                <SecretInput id="setup-adzuna-key" label="Adzuna App Key" value={state.adzunaAppKey} onChange={(value) => patch({ adzunaAppKey: value })} fieldName="rorilo-setup-adzuna-key" />
-                <SecretInput id="setup-techmap-key" label="Techmap key" value={state.techmapKey} onChange={(value) => patch({ techmapKey: value })} fieldName="rorilo-setup-techmap-key" />
+                <Field label={t('settings.freeAdzunaId')} value={state.adzunaAppId} onChange={(value) => patch({ adzunaAppId: value })} />
+                <SecretInput id="setup-adzuna-key" label={t('settings.freeAdzunaKey')} value={state.adzunaAppKey} onChange={(value) => patch({ adzunaAppKey: value })} fieldName="rorilo-setup-adzuna-key" />
+                <SecretInput id="setup-techmap-key" label={t('settings.freeTechmapKey')} value={state.techmapKey} onChange={(value) => patch({ techmapKey: value })} fieldName="rorilo-setup-techmap-key" />
               </div>
 
               <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 p-4">
@@ -811,9 +812,9 @@ export default function SetupPage() {
                     <ImageIcon className="size-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-neutral-900">Company logos</p>
+                    <p className="text-sm font-semibold text-neutral-900">{t('setup.logoTitle')}</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
-                      Add a Logo.dev publishable key so company logos can appear in Discover, job details, and company pages.
+                      {t('setup.logoDesc')}
                     </p>
                     {state.hasLogoToken && (
                       <p className={cn(
@@ -821,8 +822,8 @@ export default function SetupPage() {
                         state.logoKeyType === 'publishable' ? 'text-emerald-700' : 'text-amber-700'
                       )}>
                         {state.logoKeyType === 'publishable'
-                          ? 'Publishable key saved.'
-                          : 'A key is saved, but image logos need a pk_ publishable key.'}
+                          ? t('setup.logoSavedOk')
+                          : t('setup.logoSavedNonPk')}
                       </p>
                     )}
                   </div>
@@ -833,18 +834,18 @@ export default function SetupPage() {
                   rel="noreferrer"
                   className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-950 hover:underline"
                 >
-                  <span>Open Logo.dev dashboard</span>
+                  <span>{t('settings.logoOpenDashboard')}</span>
                   <ExternalLink className="size-3.5" />
                 </a>
                 <SecretInput
                   id="setup-logo-token"
-                  label="Logo.dev publishable key"
+                  label={t('setup.logoTokenLabel')}
                   value={state.logoToken}
                   onChange={(value) => {
                     patch({ logoToken: value });
                     setLogoTestResult(null);
                   }}
-                  placeholder={state.hasLogoToken ? 'Key saved. Leave blank to keep it.' : 'pk_...'}
+                  placeholder={state.hasLogoToken ? t('common.keyKept') : 'pk_...'}
                   fieldName="rorilo-setup-logo-token"
                 />
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -857,7 +858,7 @@ export default function SetupPage() {
                     className="h-8 text-xs"
                   >
                     {logoTesting && <Loader2 className="size-3.5 animate-spin" />}
-                    <span>Test logo key</span>
+                    <span>{t('setup.logoTest')}</span>
                   </Button>
                   {logoTestResult && (
                     <span className={cn(
@@ -874,21 +875,21 @@ export default function SetupPage() {
 
           {step.id === 'dispatch' && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-neutral-600">Email setup is optional. You can still download PDFs and copy drafts without it.</p>
-              <Field label="Gmail address" value={state.emailUser} onChange={(value) => patch({ emailUser: value })} />
+              <p className="text-sm text-neutral-600">{t('setup.dispatchNote')}</p>
+              <Field label={t('settings.emailUserLabel')} value={state.emailUser} onChange={(value) => patch({ emailUser: value })} />
               <div className="flex flex-col gap-4 sm:flex-row">
-                <Field label="Google OAuth Client ID" value={state.emailClientId} onChange={(value) => patch({ emailClientId: value })} />
-                <SecretInput id="setup-email-secret" label="Client Secret" value={state.emailClientSecret} onChange={(value) => patch({ emailClientSecret: value })} fieldName="rorilo-setup-email-secret" />
+                <Field label={t('settings.emailClientIdLabel')} value={state.emailClientId} onChange={(value) => patch({ emailClientId: value })} />
+                <SecretInput id="setup-email-secret" label={t('settings.emailClientSecretLabel')} value={state.emailClientSecret} onChange={(value) => patch({ emailClientSecret: value })} fieldName="rorilo-setup-email-secret" />
               </div>
               <div className="flex flex-wrap gap-2 pt-2">
                 <Link href="/" className={buttonVariants()}>
-                  Open Discover
+                  {t('drafts.openDiscover')}
                 </Link>
                 <Link href="/profile" className={buttonVariants({ variant: 'outline' })}>
-                  Review profile
+                  {t('setup.reviewProfile')}
                 </Link>
                 <Link href="/settings" className={buttonVariants({ variant: 'outline' })}>
-                  Advanced settings
+                  {t('setup.advanced')}
                 </Link>
               </div>
             </div>
@@ -954,7 +955,7 @@ function SelectField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: Array<string | { value: string; label: string }>;
 }) {
   const id = `setup-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   return (
@@ -966,9 +967,12 @@ function SelectField({
         onChange={(event) => onChange(event.target.value)}
         className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
+        {options.map((option) => {
+          const item = typeof option === 'string' ? { value: option, label: option } : option;
+          return (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          );
+        })}
       </select>
     </div>
   );

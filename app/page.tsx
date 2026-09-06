@@ -153,7 +153,7 @@ export default function JobsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedJobIds.length === 0) return;
-    const shouldDelete = window.confirm(`Delete ${selectedJobIds.length} selected job${selectedJobIds.length === 1 ? '' : 's'}?`);
+    const shouldDelete = window.confirm(t('discover.deleteConfirmSelected', { count: selectedJobIds.length, plural: selectedJobIds.length === 1 ? '' : 's' }));
     if (!shouldDelete) return;
 
     setBulkDeleting(true);
@@ -170,7 +170,7 @@ export default function JobsPage() {
         setJobs((current) => current.filter((job) => !idsToDelete.includes(job.id)));
         setSelectedJobIds([]);
       } else {
-        setDeleteError(data.error || 'Could not delete selected jobs.');
+        setDeleteError(data.error || t('discover.deleteSelectedFailed'));
       }
     } catch (err) {
       setDeleteError((err as Error).message);
@@ -182,7 +182,7 @@ export default function JobsPage() {
 
   const handleDeleteSkipped = async () => {
     if (skippedJobs.length === 0) return;
-    const shouldDelete = window.confirm(`Delete ${skippedJobs.length} skipped job${skippedJobs.length === 1 ? '' : 's'}?`);
+    const shouldDelete = window.confirm(t('discover.deleteConfirmSkipped', { count: skippedJobs.length, plural: skippedJobs.length === 1 ? '' : 's' }));
     if (!shouldDelete) return;
 
     setBulkDeleting(true);
@@ -199,7 +199,7 @@ export default function JobsPage() {
         setJobs((current) => current.filter((job) => !skippedIds.includes(job.id)));
         setSelectedJobIds((current) => current.filter((id) => !skippedIds.includes(id)));
       } else {
-        setDeleteError(data.error || 'Could not delete skipped jobs.');
+        setDeleteError(data.error || t('discover.deleteSkippedFailed'));
       }
     } catch (err) {
       setDeleteError((err as Error).message);

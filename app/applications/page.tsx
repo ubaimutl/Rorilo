@@ -14,10 +14,10 @@ import { CompanyLogo } from '@/components/CompanyLogo';
 import { useI18n } from '@/components/I18nProvider';
 
 const COLUMNS = [
-  { id: 'APPLIED', label: 'Applied', dot: 'bg-indigo-500' },
-  { id: 'INTERVIEW', label: 'Interview', dot: 'bg-amber-500' },
-  { id: 'OFFER', label: 'Offer', dot: 'bg-emerald-500' },
-  { id: 'REJECTED', label: 'Rejected', dot: 'bg-neutral-300' },
+  { id: 'APPLIED', labelKey: 'tracker.colApplied' as const, dot: 'bg-indigo-500' },
+  { id: 'INTERVIEW', labelKey: 'tracker.colInterview' as const, dot: 'bg-amber-500' },
+  { id: 'OFFER', labelKey: 'tracker.colOffer' as const, dot: 'bg-emerald-500' },
+  { id: 'REJECTED', labelKey: 'tracker.colRejected' as const, dot: 'bg-neutral-300' },
 ];
 
 const ORDERED_STATUSES = ['APPLIED', 'INTERVIEW', 'OFFER', 'REJECTED'];
@@ -133,7 +133,7 @@ export default function ApplicationsPage() {
 
       <main className="p-6 md:p-8 flex-1 overflow-x-auto">
         {loading ? (
-          <div className="flex flex-col md:flex-row gap-4 items-stretch min-w-[950px] pb-10" aria-label="Loading tracker">
+          <div className="flex flex-col md:flex-row gap-4 items-stretch min-w-[950px] pb-10" aria-label={t('tracker.loading')}>
             {[0, 1, 2, 3].map((col) => (
               <div key={col} className="bg-neutral-50/70 border border-neutral-200 rounded-xl p-3 flex flex-col gap-2.5 flex-1">
                 <Skeleton className="h-4 w-24" />
@@ -149,9 +149,9 @@ export default function ApplicationsPage() {
                 <EmptyMedia variant="icon">
                   <KanbanSquare />
                 </EmptyMedia>
-                <EmptyTitle>No tracked applications yet.</EmptyTitle>
+                <EmptyTitle>{t('tracker.emptyTitle')}</EmptyTitle>
                 <EmptyDescription>
-                  Mark a drafted role as applied when you send it. It will appear here for follow-up.
+                  {t('tracker.emptyHint')}
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
@@ -159,7 +159,7 @@ export default function ApplicationsPage() {
                   href="/"
                   className={buttonVariants({ size: 'sm' })}
                 >
-                  Open Discover
+                  {t('drafts.openDiscover')}
                 </Link>
               </EmptyContent>
             </Empty>
@@ -192,7 +192,7 @@ export default function ApplicationsPage() {
                     <div className="flex items-center gap-2">
                       <span className={`size-2 rounded-full ${col.dot}`} aria-hidden="true" />
                       <span className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                        {col.label}
+                        {t(col.labelKey)}
                       </span>
                       <Badge variant="secondary" className="tabular-nums">
                         {colApps.length}
@@ -251,7 +251,7 @@ export default function ApplicationsPage() {
                               <button
                                 onClick={() => moveStatus(app, 'prev')}
                                 className="p-1 rounded text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                                title="Move to previous stage"
+                                title={t('tracker.prev')}
                               >
                                 <ChevronLeft className="size-3.5" />
                               </button>
@@ -261,7 +261,7 @@ export default function ApplicationsPage() {
                               <button
                                 onClick={() => moveStatus(app, 'next')}
                                 className="p-1 rounded text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-                                title="Advance to next stage"
+                                title={t('tracker.next')}
                               >
                                 <ChevronRight className="size-3.5" />
                               </button>
@@ -270,7 +270,7 @@ export default function ApplicationsPage() {
                             <Link
                               href={`/jobs/${app.job.id}`}
                               className="p-1 rounded text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
-                              title="Open job details"
+                              title={t('tracker.openDetails')}
                             >
                               <ArrowRight className="size-3.5" />
                             </Link>
@@ -281,7 +281,7 @@ export default function ApplicationsPage() {
 
                     {colApps.length === 0 && (
                       <div className="h-28 border border-dashed border-neutral-200 rounded-lg flex items-center justify-center text-xs text-neutral-400">
-                        Empty
+                        {t('tracker.emptyCol')}
                       </div>
                     )}
                   </div>
@@ -293,10 +293,10 @@ export default function ApplicationsPage() {
           /* List Table View */
           <div className="max-w-4xl mx-auto w-full">
             <div className="hidden sm:grid sm:grid-cols-12 gap-4 pb-3 border-b border-neutral-200 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-              <div className="col-span-5">Role</div>
-              <div className="col-span-3">Company</div>
-              <div className="col-span-2">Date</div>
-              <div className="col-span-2 text-right">Status</div>
+              <div className="col-span-5">{t('tracker.colRole')}</div>
+              <div className="col-span-3">{t('tracker.colCompany')}</div>
+              <div className="col-span-2">{t('tracker.colDate')}</div>
+              <div className="col-span-2 text-right">{t('tracker.colStatus')}</div>
             </div>
 
             <div className="divide-y divide-neutral-100">
@@ -329,12 +329,12 @@ export default function ApplicationsPage() {
                     <select
                       value={app.status}
                       onChange={(e) => handleStatusChange(app.id, app.job.id, e.target.value)}
-                      aria-label="Application status"
+                      aria-label={t('tracker.statusAria')}
                       className="h-8 rounded-md border border-input bg-transparent px-2.5 py-1 text-xs text-neutral-800 font-semibold outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
                     >
                       {COLUMNS.map((col) => (
                         <option key={col.id} value={col.id}>
-                          {col.label}
+                          {t(col.labelKey)}
                         </option>
                       ))}
                     </select>
@@ -342,7 +342,7 @@ export default function ApplicationsPage() {
                     <Link
                       href={`/jobs/${app.job.id}`}
                       className="text-neutral-400 hover:text-neutral-900 p-1 transition-colors"
-                      title="View application"
+                      title={t('tracker.viewApp')}
                     >
                       <ArrowRight className="size-4" />
                     </Link>

@@ -414,13 +414,13 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                 >
                   <span>{preset.name}</span>
                   <span className="text-xs text-neutral-400 group-hover:text-neutral-500 font-normal">
-                    ({normalizeCountryCode(preset.country || profileCountry)} · {preset.location || 'Any'})
+                    ({normalizeCountryCode(preset.country || profileCountry)} · {preset.location || t('search.any')})
                   </span>
                   <button
                     type="button"
                     onClick={(e) => handleDeletePreset(preset.id, e)}
                     className="opacity-0 group-hover:opacity-100 hover:text-red-600 p-0.5 ml-0.5 transition-opacity"
-                    title="Delete preset"
+                    title={t('search.deletePreset')}
                   >
                     <X className="size-2.5" />
                   </button>
@@ -435,7 +435,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
               <Input
                 value={newPresetName}
                 onChange={(e) => setNewPresetName(e.target.value)}
-                placeholder="e.g. Berlin React Senior"
+                placeholder={t('search.presetPh')}
                 className="h-7 text-xs bg-white flex-1"
                 autoFocus
                 onKeyDown={(e) => {
@@ -452,7 +452,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                 onClick={handleSavePreset}
                 className="h-7 text-xs px-2.5"
               >
-                Save
+                {t('search.save')}
               </Button>
               <Button
                 type="button"
@@ -461,7 +461,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                 onClick={() => setIsAddingPreset(false)}
                 className="h-7 text-xs px-2 text-neutral-500"
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           )}
@@ -479,7 +479,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                 setTitle(e.target.value);
                 setActivePresetId(null);
               }}
-              placeholder="e.g. Senior Frontend Engineer"
+              placeholder={t('search.titlePh')}
               className="h-10 text-sm"
               required
             />
@@ -515,7 +515,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                   setLocation(e.target.value);
                   setActivePresetId(null);
                 }}
-                placeholder="e.g. Berlin"
+                placeholder={t('search.locationPh')}
                 className="text-xs"
               />
             </div>
@@ -576,7 +576,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                     return (
                       <label
                         key={source.id}
-                        title={`${source.tagline} — paid Apify run${covered ? '' : ' — not tuned for selected country'}`}
+                        title={`${source.tagline}${t('search.paidRun')}${covered ? '' : t('search.notTuned')}`}
                         className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-xs cursor-pointer transition-colors ${
                           isSelected
                             ? 'border-blue-500 bg-blue-50/60 text-blue-900 font-medium'
@@ -590,7 +590,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                           className="size-3.5 rounded border-neutral-300 cursor-pointer text-blue-600"
                         />
                         <span>{shortName}</span>
-                        <span className="text-neutral-400 font-normal">{covered ? coverageLabel : 'other'}</span>
+                        <span className="text-neutral-400 font-normal">{covered ? coverageLabel : t('search.other')}</span>
                       </label>
                     );
                   })}
@@ -623,7 +623,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                 return (
                 <div key={priority} className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs text-neutral-400 font-medium w-full sm:w-auto sm:min-w-24">
-                    {sourceCoverageGroupTitle(priority, country)}
+                    {sourceCoverageGroupTitle(priority, country, t)}
                   </span>
                   {sources.map((source) => {
                       const isSelected = selectedFree.includes(source.id);
@@ -631,12 +631,12 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                       const covered = sourceCoversCountry(source.coverage, country);
                       const coverageLabel = sourceCoverageLabel(source.coverage, country);
                       const keyNote = source.id === 'ats'
-                        ? (ready ? 'boards set' : 'needs boards')
-                        : source.needsKey ? (ready ? 'key set' : 'needs key') : 'no key';
+                        ? (ready ? t('search.boardsSet') : t('search.needsBoards'))
+                        : source.needsKey ? (ready ? t('search.keySet') : t('search.needsKey')) : t('search.noKey');
                       return (
                         <label
                           key={source.id}
-                          title={ready ? `${source.tagline}${covered ? '' : ' — not tuned for selected country'}` : `${source.tagline} — add keys in Settings > Free Sources`}
+                          title={ready ? `${source.tagline}${covered ? '' : t('search.notTuned')}` : `${source.tagline}${t('search.addKeys')}`}
                           className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-xs cursor-pointer transition-colors ${
                             isSelected
                               ? 'border-emerald-500 bg-emerald-50/60 text-emerald-900 font-medium'
@@ -651,7 +651,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
                           />
                           <span className={`size-1.5 rounded-full ${ready ? 'bg-emerald-500' : 'bg-amber-400'}`} aria-hidden="true" />
                           <span>{source.name}</span>
-                          <span className="text-neutral-400 font-normal">{covered ? `${coverageLabel} · ${keyNote}` : 'other'}</span>
+                          <span className="text-neutral-400 font-normal">{covered ? `${coverageLabel} · ${keyNote}` : t('search.other')}</span>
                         </label>
                       );
                     })}
@@ -663,7 +663,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
             {customActorIds.length > 0 ? (
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-neutral-700">
-                  Custom actors <span className="font-normal text-neutral-400">(runs on your Apify credit)</span>
+                  {t('search.customActors')} <span className="font-normal text-neutral-400">{t('search.runsCredit')}</span>
                 </Label>
                 <div className="flex flex-wrap gap-1.5">
                   {customActorIds.map((actor) => {
@@ -692,7 +692,7 @@ export function SearchModal({ isOpen, onClose, onSearchComplete }: SearchModalPr
               </div>
             ) : (
               <p className="text-xs text-neutral-400">
-                Need another board? Add custom Apify actors in Settings &gt; Job Discovery.
+                {t('search.customHint')}
               </p>
             )}
           </div>

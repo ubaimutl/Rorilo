@@ -10,6 +10,7 @@ import {
   Copy,
   Download,
   Send,
+  Save,
   Sparkles,
   Mail,
   MapPin,
@@ -42,12 +43,16 @@ import { formatCurrency } from '@/lib/utils';
 import { resolveSourceUrl } from '@/lib/jobs/normalize';
 import { downloadCoverLetterPdf, CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/pdf/generatePdf';
 import { notify } from '@/components/AppNotifications';
+import { useI18n } from '@/components/I18nProvider';
+import { JobDescriptionInput } from '@/components/JobDescriptionInput';
+import { RequestChanges } from '@/components/RequestChanges';
 
 function companyHref(company: string) {
   return `/companies/${encodeURIComponent(encodeURIComponent(company))}`;
 }
 
 export default function JobDetailPage() {
+  const { t } = useI18n();
   const params = useParams();
   const id = params?.id as string;
 
@@ -67,6 +72,10 @@ export default function JobDetailPage() {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [coverLetterContent, setCoverLetterContent] = useState('');
+  const [revisingEmail, setRevisingEmail] = useState(false);
+  const [revisingCover, setRevisingCover] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingCover, setSavingCover] = useState(false);
 
   const fetchJob = async (trackView = false) => {
     if (!id) return;
@@ -122,7 +131,7 @@ export default function JobDetailPage() {
         await fetchJob();
         setIsSheetOpen(true);
       } else {
-        alert(data.error || 'Failed to prepare application');
+        alert(data.error || t('jobdetail.prepareFailed'));
       }
     } catch (err) {
       alert((err as Error).message);
@@ -147,9 +156,9 @@ export default function JobDetailPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setDraftNotice('Draft created in your Gmail mailbox.');
+        setDraftNotice(t('material.draftCreated'));
       } else {
-        setDraftNotice(data.message || 'Draft prepared. You can copy the text.');
+        setDraftNotice(data.message || t('material.draftFallback'));
       }
       await fetchJob();
     } catch (err) {
@@ -174,8 +183,110 @@ export default function JobDetailPage() {
     }
   };
 
+  const coverDoc = job?.application?.documents?.find((d: any) => d.type === 'COVER_LETTER');
+  const emailDoc = job?.application?.documents?.find((d: any) => d.type === 'EMAIL_DRAFT');
+
+  const flashDraftNotice = (message: string) => {
+    setDraftNotice(message);
+    setTimeout(() => setDraftNotice(null), 2500);
+  };
+
+  const handleReviseEmail = async (instruction: string): Promise<string | null> => {
+    if (!job) return t('revise.failed');
+    setRevisingEmail(true);
+    try {
+      const res = await fetch(`/api/jobs/${job.id}/revise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'email', subject: emailSubject, body: emailBody, instruction }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        return data.error || t('revise.failed');
+      }
+      setEmailSubject(data.subject ?? '');
+      setEmailBody(data.body ?? '');
+      return null;
+    } catch (err) {
+      return (err as Error).message;
+    } finally {
+      setRevisingEmail(false);
+    }
+  };
+
+  const handleReviseCover = async (instruction: string): Promise<string | null> => {
+    if (!job) return t('revise.failed');
+    setRevisingCover(true);
+    try {
+      const res = await fetch(`/api/jobs/${job.id}/revise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'cover-letter', content: coverLetterContent, instruction }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        return data.error || t('revise.failed');
+      }
+      setCoverLetterContent(data.revisedText ?? '');
+      return null;
+    } catch (err) {
+      return (err as Error).message;
+    } finally {
+      setRevisingCover(false);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    if (!job || !emailDoc) return;
+    setSavingEmail(true);
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: emailDoc.id,
+          content: JSON.stringify({ subject: emailSubject, body: emailBody }),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDraftNotice(data.error || t('revise.saveFailed'));
+        return;
+      }
+      await fetchJob();
+      flashDraftNotice(t('revise.saved'));
+    } catch (err) {
+      setDraftNotice((err as Error).message);
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
+  const handleSaveCover = async () => {
+    if (!job || !coverDoc) return;
+    setSavingCover(true);
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: coverDoc.id, content: coverLetterContent }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDraftNotice(data.error || t('revise.saveFailed'));
+        return;
+      }
+      await fetchJob();
+      flashDraftNotice(t('revise.saved'));
+    } catch (err) {
+      setDraftNotice((err as Error).message);
+    } finally {
+      setSavingCover(false);
+    }
+  };
+
   const handleDownloadPdf = () => {
-    const candidateName = `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || 'Candidate';
+    const candidateName = `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || t('drafts.candidateFallback');
     const additionalLinks = (() => {
       try {
         return JSON.parse(profile?.additionalUrls || '[]');
@@ -205,8 +316,8 @@ export default function JobDetailPage() {
     );
     notify({
       type: 'success',
-      title: 'PDF download started',
-      message: 'Check your Downloads folder.',
+      title: t('coverletter.pdfStarted'),
+      message: t('coverletter.pdfHint'),
     });
   };
 
@@ -219,7 +330,7 @@ export default function JobDetailPage() {
       if (res.ok && data.success) {
         await fetchJob();
       } else {
-        setEnrichError(data.error || 'Could not fetch the full description.');
+        setEnrichError(data.error || t('drafts.descFailed'));
       }
     } catch (err) {
       setEnrichError((err as Error).message);
@@ -232,7 +343,7 @@ export default function JobDetailPage() {
     return (
       <div className="flex-1 flex items-center justify-center py-28 text-sm text-neutral-400 gap-2.5">
         <Loader2 className="size-4.5 animate-spin" />
-        Loading role details...
+        {t('jobdetail.loading')}
       </div>
     );
   }
@@ -240,9 +351,9 @@ export default function JobDetailPage() {
   if (!job) {
     return (
       <div className="p-10 text-sm text-neutral-500">
-        Job not found.{' '}
+        {t('jobdetail.notFound')}{' '}
         <Link href="/" className="underline text-neutral-900 font-medium">
-          Back to Discover
+          {t('company.back')}
         </Link>
       </div>
     );
@@ -253,17 +364,17 @@ export default function JobDetailPage() {
   const calibrated = isAiCalibrated(match);
 
   const remoteLabel =
-    job.remoteType === 'remote' ? 'Remote' : job.remoteType === 'hybrid' ? 'Hybrid' : job.remoteType === 'onsite' ? 'Onsite' : null;
+    job.remoteType === 'remote' ? t('discover.workplace.remote') : job.remoteType === 'hybrid' ? t('discover.workplace.hybrid') : job.remoteType === 'onsite' ? t('discover.workplace.onsite') : null;
 
   const scoreBreakdown = match
     ? [
-        { label: 'Skills', value: match.skillsScore ?? 0, max: 30 },
-        { label: 'Role fit', value: match.roleScore ?? 0, max: 20 },
-        { label: 'Experience', value: match.experienceScore ?? 0, max: 15 },
-        { label: 'Location', value: match.locationScore ?? 0, max: 15 },
-        { label: 'Preferences', value: match.preferencesScore ?? 0, max: 10 },
-        { label: 'Language', value: match.languageScore ?? 0, max: 5 },
-        { label: 'Salary', value: match.salaryScore ?? 0, max: 5 },
+        { label: t('jobdetail.skills'), value: match.skillsScore ?? 0, max: 30 },
+        { label: t('jobdetail.roleFit'), value: match.roleScore ?? 0, max: 20 },
+        { label: t('jobdetail.experience'), value: match.experienceScore ?? 0, max: 15 },
+        { label: t('jobdetail.location'), value: match.locationScore ?? 0, max: 15 },
+        { label: t('jobdetail.preferences'), value: match.preferencesScore ?? 0, max: 10 },
+        { label: t('jobdetail.language'), value: match.languageScore ?? 0, max: 5 },
+        { label: t('jobdetail.salary'), value: match.salaryScore ?? 0, max: 5 },
       ]
     : [];
 
@@ -271,9 +382,9 @@ export default function JobDetailPage() {
   const hasDescription = descriptionLength > 0;
   const descriptionNotice =
     descriptionLength === 0
-      ? 'This listing arrived without a description, so the match score is based on title and location only. Open the original posting for full details.'
+      ? `${t('drafts.noDesc')} ${t('drafts.openOriginalHint')}`
       : descriptionLength < 200
-      ? 'Only a short preview arrived for this listing — the source did not provide a full description. Open the original posting for full details.'
+      ? `${t('drafts.shortDesc')} ${t('drafts.openOriginalHint')}`
       : null;
   const canEnrich =
     descriptionLength < 200 &&
@@ -305,10 +416,10 @@ export default function JobDetailPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-background">
       <PageHeader
-        back={{ href: '/', label: 'Discover' }}
+        back={{ href: '/', label: t('discover.title') }}
         title={job.title}
-        description={`${job.company} · ${job.location || 'Location unlisted'} · ${
-          job.remoteType ? String(job.remoteType).charAt(0).toUpperCase() + String(job.remoteType).slice(1) : ''
+        description={`${job.company} · ${job.location || t('jobdetail.locationUnlisted')} · ${
+          remoteLabel || ''
         }`}
         badge={
           <CompanyLogo
@@ -325,7 +436,7 @@ export default function JobDetailPage() {
                 href="/prepared"
                 className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-block"
               >
-                Open in Drafts →
+                {t('material.openInDrafts')} →
               </Link>
             )}
 
@@ -333,22 +444,22 @@ export default function JobDetailPage() {
               href={companyHref(job.company)}
               className="text-sm font-medium text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white transition-colors hidden sm:inline-block"
             >
-              Company
+              {t('jobdetail.company')}
             </Link>
 
             <select
               value={job.application?.status || 'NEW'}
               onChange={(e) => handleStatusChange(e.target.value)}
-              aria-label="Application status"
+              aria-label={t('tracker.statusAria')}
               className="h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm font-semibold text-neutral-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 cursor-pointer"
             >
-              <option value="NEW">Unapplied</option>
-              <option value="SAVED">Saved</option>
-              <option value="READY">Prepared</option>
-              <option value="APPLIED">Applied</option>
-              <option value="INTERVIEW">Interview</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="OFFER">Offer</option>
+              <option value="NEW">{t('jobdetail.unapplied')}</option>
+              <option value="SAVED">{t('discover.tabs.saved')}</option>
+              <option value="READY">{t('drafts.statusReady')}</option>
+              <option value="APPLIED">{t('tracker.colApplied')}</option>
+              <option value="INTERVIEW">{t('tracker.colInterview')}</option>
+              <option value="REJECTED">{t('tracker.colRejected')}</option>
+              <option value="OFFER">{t('tracker.colOffer')}</option>
             </select>
           </>
         }
@@ -390,7 +501,7 @@ export default function JobDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>About the role</CardTitle>
+                <CardTitle>{t('jobdetail.about')}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 {descriptionNotice && (
@@ -407,10 +518,10 @@ export default function JobDetailPage() {
                       onClick={handleEnrich}
                       disabled={enriching}
                       className="text-xs h-8 gap-1.5"
-                      title="Fetches the full posting text via one Apify detail request (about $0.001)"
+                      title={t('drafts.fetchTitle')}
                     >
                       {enriching ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
-                      <span>{enriching ? 'Fetching full description…' : 'Fetch full description'}</span>
+                      <span>{enriching ? t('drafts.fetching') : t('drafts.fetch')}</span>
                     </Button>
                     {enrichError && (
                       <span className="text-xs text-red-600 font-medium">{enrichError}</span>
@@ -418,6 +529,9 @@ export default function JobDetailPage() {
                   </div>
                 )}
                 {hasDescription && <FormattedDescription text={job.description} />}
+                {descriptionLength < 200 && (
+                  <JobDescriptionInput jobId={job.id} onSaved={() => fetchJob()} />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -429,9 +543,9 @@ export default function JobDetailPage() {
                 <div className="flex items-center gap-4">
                   <ScoreRing score={score} size={68} calibrated={calibrated} />
                   <div>
-                    <p className="text-sm font-semibold text-neutral-900">Overall match</p>
+                    <p className="text-sm font-semibold text-neutral-900">{t('drafts.overall')}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Deterministic 7-category score, no guesswork.
+                      {t('drafts.deterministic')}
                     </p>
                   </div>
                 </div>
@@ -444,7 +558,7 @@ export default function JobDetailPage() {
 
                 {strongMatches.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm pt-1">
-                    <h3 className="font-semibold text-neutral-900">Why it matches</h3>
+                    <h3 className="font-semibold text-neutral-900">{t('jobdetail.why')}</h3>
                     <ul className="flex flex-col gap-1 text-neutral-600">
                       {strongMatches.slice(0, 4).map((m, i) => (
                         <li key={i} className="flex items-start gap-1.5">
@@ -458,7 +572,7 @@ export default function JobDetailPage() {
 
                 {possibleIssues.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm pt-1">
-                    <h3 className="font-semibold text-neutral-900">Potential issues</h3>
+                    <h3 className="font-semibold text-neutral-900">{t('jobdetail.issues')}</h3>
                     <ul className="flex flex-col gap-1 text-neutral-600">
                       {possibleIssues.slice(0, 3).map((issue, i) => (
                         <li key={i} className="flex items-start gap-1.5">
@@ -475,8 +589,8 @@ export default function JobDetailPage() {
             {scoreBreakdown.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Score breakdown</CardTitle>
-                  <CardDescription>Points earned per category.</CardDescription>
+                  <CardTitle>{t('jobdetail.breakdown')}</CardTitle>
+                  <CardDescription>{t('jobdetail.points')}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                   {scoreBreakdown.map((row) => (
@@ -497,11 +611,11 @@ export default function JobDetailPage() {
             {(sourceLabels.length > 0 || sourceLinks.length > 0) && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Source coverage</CardTitle>
+                  <CardTitle>{t('company.sourceTitle')}</CardTitle>
                   <CardDescription>
                     {sourceLabels.length > 1
-                      ? `Merged from ${sourceLabels.length} sources.`
-                      : 'Where this posting was found.'}
+                      ? t('jobdetail.merged', { count: sourceLabels.length })
+                      : t('jobdetail.foundWhere')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
@@ -546,10 +660,10 @@ export default function JobDetailPage() {
                 )}
                 <span>
                   {preparing
-                    ? 'Preparing...'
+                    ? t('material.preparing')
                     : isPrepared
-                    ? 'View Draft'
-                    : 'Prepare application'}
+                    ? t('material.viewDraft')
+                    : t('material.prepareApplication')}
                 </span>
               </Button>
 
@@ -561,7 +675,7 @@ export default function JobDetailPage() {
                   size="sm"
                   className="w-full text-xs h-8 text-neutral-500"
                 >
-                  Regenerate material
+                  {t('material.regenerate')}
                 </Button>
               )}
 
@@ -575,7 +689,7 @@ export default function JobDetailPage() {
                     className: 'w-full text-sm h-10 justify-center font-medium',
                   })}
                 >
-                  <span>Open original job</span>
+                  <span>{t('material.openOriginal')}</span>
                   <ExternalLink className="size-4 ml-1.5 text-neutral-400" />
                 </a>
               )}
@@ -589,10 +703,10 @@ export default function JobDetailPage() {
         <SheetContent className="sm:max-w-2xl lg:max-w-3xl w-full overflow-y-auto overflow-x-hidden p-6 sm:p-8 space-y-6">
           <SheetHeader className="p-0 space-y-1">
             <SheetTitle className="text-base font-semibold tracking-tight text-neutral-900">
-              Application Material
+              {t('jobdetail.sheetTitle')}
             </SheetTitle>
             <SheetDescription className="text-sm text-neutral-500">
-              Review and customize your tailored materials for {job.company}.
+              {t('jobdetail.sheetDesc', { company: job.company })}
             </SheetDescription>
           </SheetHeader>
 
@@ -601,7 +715,7 @@ export default function JobDetailPage() {
             <div className="space-y-3.5 pt-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-semibold text-neutral-900">
-                  Application Email (To: {job.contactEmail})
+                  {t('material.emailTo', { email: job.contactEmail })}
                 </span>
                 <button
                   onClick={() => {
@@ -612,12 +726,18 @@ export default function JobDetailPage() {
                   className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 cursor-pointer"
                 >
                   {copiedEmail ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-                  <span>{copiedEmail ? 'Copied' : 'Copy text'}</span>
+                  <span>{copiedEmail ? t('material.copied') : t('material.copyText')}</span>
                 </button>
               </div>
 
+              <RequestChanges
+                inputId="job-revise-email"
+                applying={revisingEmail}
+                onApply={handleReviseEmail}
+              />
+
               <div className="space-y-1.5">
-                <Label htmlFor="email-sub" className="text-xs font-medium text-neutral-700">Subject</Label>
+                <Label htmlFor="email-sub" className="text-xs font-medium text-neutral-700">{t('material.subject')}</Label>
                 <Input
                   id="email-sub"
                   value={emailSubject}
@@ -627,7 +747,7 @@ export default function JobDetailPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email-msg" className="text-xs font-medium text-neutral-700">Message</Label>
+                <Label htmlFor="email-msg" className="text-xs font-medium text-neutral-700">{t('material.message')}</Label>
                 <Textarea
                   id="email-msg"
                   value={emailBody}
@@ -639,9 +759,21 @@ export default function JobDetailPage() {
 
               <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
                 <span className="text-xs text-neutral-400">
-                  Attachments: CV (PDF), Cover Letter (PDF)
+                  {t('material.attachments', { list: 'CV (PDF), Cover Letter (PDF)' })}
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
+                  {emailDoc && (
+                    <Button
+                      onClick={handleSaveEmail}
+                      disabled={savingEmail}
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-8 gap-1.5 shadow-xs"
+                    >
+                      {savingEmail ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                      <span>{savingEmail ? t('common.saving') : t('revise.save')}</span>
+                    </Button>
+                  )}
                   <a
                     href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
                       job?.contactEmail || ''
@@ -651,8 +783,8 @@ export default function JobDetailPage() {
                     onClick={() => {
                       notify({
                         type: 'info',
-                        title: 'Opening Gmail',
-                        message: 'Rorilo is handing the draft to your browser.',
+                        title: t('drafts.openingGmail'),
+                        message: t('drafts.handingBrowser'),
                       });
                     }}
                     className={buttonVariants({
@@ -660,10 +792,10 @@ export default function JobDetailPage() {
                       size: 'sm',
                       className: 'text-xs h-8 gap-1.5 cursor-pointer shadow-xs',
                     })}
-                    title="Open pre-filled in your browser Gmail (Zero setup required)"
+                    title={t('drafts.gmailTitle')}
                   >
                     <ExternalLink className="size-3.5 text-neutral-500" />
-                    <span>Open in Gmail</span>
+                    <span>{t('material.openGmail')}</span>
                   </a>
 
                   <a
@@ -673,8 +805,8 @@ export default function JobDetailPage() {
                     onClick={() => {
                       notify({
                         type: 'info',
-                        title: 'Opening mail app',
-                        message: 'Rorilo is handing the draft to your default mail client.',
+                        title: t('drafts.openingMail'),
+                        message: t('drafts.handingClient'),
                       });
                     }}
                     className={buttonVariants({
@@ -682,10 +814,10 @@ export default function JobDetailPage() {
                       size: 'sm',
                       className: 'text-xs h-8 gap-1.5 cursor-pointer shadow-xs',
                     })}
-                    title="Open pre-filled in your desktop email app"
+                    title={t('drafts.mailTitle')}
                   >
                     <Mail className="size-3.5 text-neutral-500" />
-                    <span>Open in Mail App</span>
+                    <span>{t('material.openMailApp')}</span>
                   </a>
 
                   <Button
@@ -693,10 +825,10 @@ export default function JobDetailPage() {
                     disabled={draftingEmail}
                     size="sm"
                     className="text-xs h-8 gap-1.5 shadow-xs"
-                    title="Create draft in Gmail account via API"
+                    title={t('drafts.apiTitle')}
                   >
                     {draftingEmail ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5 mr-1" />}
-                    <span>Save to Gmail Drafts</span>
+                    <span>{t('material.saveGmailDrafts')}</span>
                   </Button>
                 </div>
               </div>
@@ -712,12 +844,12 @@ export default function JobDetailPage() {
           {/* Cover Letter */}
           <div className="space-y-3.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-sm">
-              <span className="font-semibold text-neutral-900">Cover Letter</span>
+              <span className="font-semibold text-neutral-900">{t('material.coverLetter')}</span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={selectedTemplate}
                   onChange={(e) => setSelectedTemplate(e.target.value as any)}
-                  aria-label="Cover letter template"
+                  aria-label={t('coverletter.templateAria')}
                   className="h-8 max-w-[200px] sm:max-w-[240px] truncate rounded-lg border border-input bg-white px-2.5 py-1 text-xs font-medium text-neutral-800 outline-none cursor-pointer shadow-xs"
                 >
                   {COVER_LETTER_TEMPLATES.map((tmpl) => (
@@ -734,10 +866,27 @@ export default function JobDetailPage() {
                   className="text-xs h-8 gap-1.5 shadow-xs shrink-0"
                 >
                   <Download className="size-3.5" />
-                  <span>Download PDF</span>
+                  <span>{t('material.downloadPdf')}</span>
                 </Button>
+                {coverDoc && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveCover}
+                    disabled={savingCover}
+                    className="text-xs h-8 gap-1.5 shadow-xs shrink-0"
+                  >
+                    {savingCover ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                    <span>{savingCover ? t('common.saving') : t('revise.save')}</span>
+                  </Button>
+                )}
               </div>
             </div>
+            <RequestChanges
+              inputId="job-revise-cover"
+              applying={revisingCover}
+              onApply={handleReviseCover}
+            />
             <Textarea
               value={coverLetterContent}
               onChange={(e) => setCoverLetterContent(e.target.value)}
@@ -750,7 +899,7 @@ export default function JobDetailPage() {
           {qaData?.answers && qaData.answers.length > 0 && (
             <div className="space-y-3.5 pt-2">
               <span className="font-semibold text-neutral-900 text-sm block">
-                Common Screening Answers
+                {t('material.commonAnswers')}
               </span>
               <div className="space-y-2.5">
                 {qaData.answers.map((qa, i) => (
