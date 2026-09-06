@@ -171,6 +171,7 @@ fn init_database(db_path: &PathBuf, schema_path: &PathBuf) -> Result<(), String>
 fn main() {
     let sidecar: SharedChild = Arc::new(Mutex::new(None));
 
+    #[cfg(not(windows))]
     {
         let sidecar = sidecar.clone();
         std::thread::spawn(move || {
