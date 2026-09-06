@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 import { Sidebar } from "@/components/Sidebar";
 import { I18nProvider } from "@/components/I18nProvider";
 import { FirstRunSetupDialog } from "@/components/FirstRunSetupDialog";
+import { AppNotifications } from "@/components/AppNotifications";
 
 export const metadata: Metadata = {
   title: "Rorilo - Local-First AI Job Search & Application Assistant",
@@ -59,6 +60,7 @@ export default function RootLayout({
             <FirstRunSetupDialog />
             {children}
           </div>
+          <AppNotifications />
         </I18nProvider>
       </body>
     </html>

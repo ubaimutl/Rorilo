@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Download, Copy, Check, Save, FileText } from 'lucide-react';
 import { downloadCoverLetterPdf, CoverLetterPdfData, CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/pdf/generatePdf';
 import { useI18n } from '@/components/I18nProvider';
+import { notify } from '@/components/AppNotifications';
 
 export interface CoverLetterModalProps {
   isOpen: boolean;
@@ -84,6 +85,11 @@ export function CoverLetterModal({
       template,
     };
     downloadCoverLetterPdf(pdfData, `Cover_Letter_${companyName.replace(/\s+/g, '_')}.pdf`);
+    notify({
+      type: 'success',
+      title: 'PDF download started',
+      message: 'Check your Downloads folder.',
+    });
   };
 
   return (
@@ -125,7 +131,7 @@ export function CoverLetterModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
@@ -146,7 +152,7 @@ export function CoverLetterModal({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <select
               value={template}
               onChange={(e) => setTemplate(e.target.value as any)}

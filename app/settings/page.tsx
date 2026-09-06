@@ -16,6 +16,7 @@ import { orderFreeSources } from '@/lib/job-sources/free';
 import { KNOWN_JOB_SOURCES, orderApifyPicker } from '@/lib/job-sources/sources';
 import { sourceCoverageGroupTitle, sourceCoverageLabel, sourceCoveragePriority } from '@/lib/job-sources/countries';
 import { useI18n } from '@/components/I18nProvider';
+import { notify } from '@/components/AppNotifications';
 
 const BOARD_PROVIDER_OPTIONS = [
   { value: 'greenhouse', label: 'Greenhouse' },
@@ -893,6 +894,13 @@ export default function SettingsPage() {
                 <a
                   href="/api/data/export"
                   download
+                  onClick={() => {
+                    notify({
+                      type: 'success',
+                      title: 'Backup export started',
+                      message: 'Check your Downloads folder.',
+                    });
+                  }}
                   className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   <Download className="size-3.5" />

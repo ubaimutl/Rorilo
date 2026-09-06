@@ -529,10 +529,10 @@ export default function SetupPage() {
                     className={cn(
                       'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors',
                       active
-                        ? 'border-neutral-900 bg-neutral-900 text-white'
+                        ? 'border-primary bg-primary text-primary-foreground'
                         : complete
                           ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                          : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
                     )}
                   >
                     {complete && !active ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
@@ -544,7 +544,7 @@ export default function SetupPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-xs">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-xs">
           <div className="mb-5 flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-neutral-950">{step.title}</h2>
             <p className="text-sm text-neutral-500">{step.hint}</p>
@@ -576,12 +576,12 @@ export default function SetupPage() {
                 placeholder={state.hasAiKey ? 'Key saved. Leave blank to keep it.' : 'sk-...'}
                 fieldName="rorilo-setup-ai-key"
               />
-              <details className="rounded-xl border border-neutral-200 bg-neutral-50/80">
+              <details className="rounded-xl border border-border bg-muted/60">
                 <summary className="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-neutral-700">
                   <span>Advanced provider options</span>
                   <Info className="size-4 text-neutral-400" />
                 </summary>
-                <div className="flex flex-col gap-3 border-t border-neutral-200 px-3 py-3">
+                <div className="flex flex-col gap-3 border-t border-border px-3 py-3">
                   <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
                     Use this only if your model spends the answer on reasoning or your provider needs special OpenAI-compatible fields. These options apply to structured JSON tasks.
                   </p>

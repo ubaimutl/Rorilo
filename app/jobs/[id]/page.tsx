@@ -41,6 +41,7 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { resolveSourceUrl } from '@/lib/jobs/normalize';
 import { downloadCoverLetterPdf, CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/pdf/generatePdf';
+import { notify } from '@/components/AppNotifications';
 
 function companyHref(company: string) {
   return `/companies/${encodeURIComponent(encodeURIComponent(company))}`;
@@ -202,6 +203,11 @@ export default function JobDetailPage() {
       },
       `Cover_Letter_${job.company.replace(/\s+/g, '_')}.pdf`
     );
+    notify({
+      type: 'success',
+      title: 'PDF download started',
+      message: 'Check your Downloads folder.',
+    });
   };
 
   const handleEnrich = async () => {
@@ -642,6 +648,13 @@ export default function JobDetailPage() {
                     )}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={() => {
+                      notify({
+                        type: 'info',
+                        title: 'Opening Gmail',
+                        message: 'Rorilo is handing the draft to your browser.',
+                      });
+                    }}
                     className={buttonVariants({
                       variant: 'outline',
                       size: 'sm',
@@ -657,6 +670,13 @@ export default function JobDetailPage() {
                     href={`mailto:${encodeURIComponent(
                       job?.contactEmail || ''
                     )}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+                    onClick={() => {
+                      notify({
+                        type: 'info',
+                        title: 'Opening mail app',
+                        message: 'Rorilo is handing the draft to your default mail client.',
+                      });
+                    }}
                     className={buttonVariants({
                       variant: 'outline',
                       size: 'sm',
@@ -718,7 +738,6 @@ export default function JobDetailPage() {
                 </Button>
               </div>
             </div>
-
             <Textarea
               value={coverLetterContent}
               onChange={(e) => setCoverLetterContent(e.target.value)}

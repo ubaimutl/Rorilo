@@ -135,10 +135,24 @@
   html {
     @apply font-sans;
   }
+  select {
+    color-scheme: light;
+    outline: none;
+    box-shadow: none;
+  }
+  select:focus,
+  select:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 }
 
 @layer base {
   .dark body {
+    color-scheme: dark;
+  }
+
+  .dark select {
     color-scheme: dark;
   }
 

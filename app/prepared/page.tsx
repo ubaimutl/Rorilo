@@ -36,6 +36,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { resolveSourceUrl } from '@/lib/jobs/normalize';
 import { useI18n } from '@/components/I18nProvider';
 import { downloadCoverLetterPdf, CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/pdf/generatePdf';
+import { notify } from '@/components/AppNotifications';
 
 export default function PreparedJobsPage() {
   const { t } = useI18n();
@@ -264,6 +265,11 @@ export default function PreparedJobsPage() {
       },
       `Cover_Letter_${selectedJob.company.replace(/\s+/g, '_')}.pdf`
     );
+    notify({
+      type: 'success',
+      title: 'PDF download started',
+      message: 'Check your Downloads folder.',
+    });
   };
 
   const answersDoc = selectedJob?.application?.documents?.find((d: any) => d.type === 'ANSWERS');
@@ -403,8 +409,8 @@ export default function PreparedJobsPage() {
           {selectedJob ? (
             <div className="flex-1 flex flex-col min-h-0">
               {/* Right Panel Header */}
-              <div className="px-4 sm:px-8 py-5 border-b border-neutral-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background sticky top-0 z-10 shrink-0">
-                <div className="min-w-0">
+              <div className="px-4 sm:px-8 py-5 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-background sticky top-0 z-10 shrink-0">
+                <div className="min-w-0 max-w-full">
                   <button
                     type="button"
                     onClick={() => setSelectedJobId(null)}
@@ -413,21 +419,21 @@ export default function PreparedJobsPage() {
                     <ArrowLeft className="size-4" />
                     <span>All drafts</span>
                   </button>
-                  <h1 className="text-xl font-bold text-neutral-900 tracking-tight truncate">
+                  <h1 className="text-xl font-bold text-neutral-900 tracking-tight break-words">
                     {selectedJob.title}
                   </h1>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <p className="text-xs text-neutral-500 mt-1 break-words">
                     {selectedJob.company} · {selectedJob.location || 'Remote'} ·{' '}
                     <span className="capitalize">{selectedJob.remoteType}</span>
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
                   {appliedStatusNotice && (
                     <span className="text-xs text-emerald-700 font-medium">{appliedStatusNotice}</span>
                   )}
                   {materialNotice && (
-                    <span className={`text-xs font-medium ${materialNotice.includes('regenerated') ? 'text-emerald-700' : 'text-red-600'}`}>
+                    <span className={`basis-full text-xs font-medium lg:basis-auto ${/could not|failed|error/i.test(materialNotice) ? 'text-red-600' : 'text-emerald-700'}`}>
                       {materialNotice}
                     </span>
                   )}
@@ -547,7 +553,7 @@ export default function PreparedJobsPage() {
                     {/* Email Draft Section */}
                     {selectedJob.contactEmail && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <h2 className="text-sm font-semibold text-neutral-900">
                               Application Email (To: {selectedJob.contactEmail})
@@ -603,6 +609,13 @@ export default function PreparedJobsPage() {
                               )}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
                               target="_blank"
                               rel="noreferrer"
+                              onClick={() => {
+                                notify({
+                                  type: 'info',
+                                  title: 'Opening Gmail',
+                                  message: 'Rorilo is handing the draft to your browser.',
+                                });
+                              }}
                               className={buttonVariants({
                                 variant: 'outline',
                                 size: 'sm',
@@ -619,6 +632,13 @@ export default function PreparedJobsPage() {
                               href={`mailto:${encodeURIComponent(
                                 selectedJob.contactEmail || ''
                               )}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+                              onClick={() => {
+                                notify({
+                                  type: 'info',
+                                  title: 'Opening mail app',
+                                  message: 'Rorilo is handing the draft to your default mail client.',
+                                });
+                              }}
                               className={buttonVariants({
                                 variant: 'outline',
                                 size: 'sm',
@@ -654,8 +674,8 @@ export default function PreparedJobsPage() {
 
                     {/* Cover Letter Section */}
                     <div className="space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
                           <h2 className="text-sm font-semibold text-neutral-900">
                             Tailored Cover Letter
                           </h2>
@@ -664,13 +684,13 @@ export default function PreparedJobsPage() {
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
                           <label className="text-xs text-neutral-500 font-medium">Design:</label>
                           <select
                             value={selectedTemplate}
                             onChange={(e) => setSelectedTemplate(e.target.value as any)}
                             aria-label="Cover letter template"
-                            className="h-8 rounded-lg border border-input bg-white px-2.5 py-1 text-xs font-medium text-neutral-800 outline-none cursor-pointer shadow-xs"
+                            className="h-8 min-w-0 rounded-lg border border-input bg-white px-2.5 py-1 text-xs font-medium text-neutral-800 outline-none cursor-pointer shadow-xs sm:flex-1 lg:w-80 lg:flex-none"
                           >
                             {COVER_LETTER_TEMPLATES.map((tmpl) => (
                               <option key={tmpl.id} value={tmpl.id}>
