@@ -54,8 +54,6 @@ jobs:
 
       - run: npm run desktop:prepare-node
 
-      - run: cargo install tauri-cli --locked
-
       - name: Build desktop app
         run: npm run desktop:package-native
 
