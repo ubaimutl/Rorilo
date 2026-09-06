@@ -7,7 +7,7 @@ const tauriCli = path.join(root, 'node_modules', '@tauri-apps', 'cli', 'tauri.js
 const args = [tauriCli, 'build'];
 
 if (process.platform === 'linux') {
-  args.push('--bundles', 'deb');
+  args.push('--bundles', 'appimage');
 }
 
 const child = spawn(process.execPath, args, {

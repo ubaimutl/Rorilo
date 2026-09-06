@@ -15,8 +15,7 @@ Desktop builds are available from the [latest GitHub release](https://github.com
 | Windows | `.exe` installer or `.msi` |
 | macOS Apple Silicon | `aarch64.dmg` |
 | macOS Intel | `x64.dmg` |
-| Debian / Ubuntu | `.deb` |
-| Arch Linux | `.pkg.tar.zst` |
+| Linux | `.AppImage` |
 
 The desktop app includes the local runtime and database setup. You do **not** need Node.js, npm, Docker, or a separate database server to use the desktop build.
 
@@ -74,6 +73,20 @@ Your CV text, profile, search history, job data, generated drafts, and settings 
 - Gmail for draft creation
 
 Rorilo does not submit job applications automatically.
+
+## Code Signing Policy
+
+Windows release builds may be signed through [SignPath.io](https://signpath.io/), with the code signing certificate provided by the SignPath Foundation for open source projects.
+
+Signing is used only to identify official Rorilo Windows binaries that were produced from this public repository and its GitHub Actions release workflow. It does not change the application's local-first privacy model.
+
+Project roles:
+
+- Committers maintain the source code and submit changes through the public GitHub repository.
+- Reviewers check code, packaging, and release changes before they are accepted.
+- Approvers authorize signing requests and release publication after verifying that the artifacts come from the expected GitHub Actions workflow.
+
+Rorilo stores profile data, CV text, job data, settings, and generated drafts locally on the user's machine. External network requests happen only for integrations the user configures, such as an AI provider, job sources, Apify, Logo.dev, or Gmail draft creation.
 
 ## Docker
 

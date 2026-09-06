@@ -46,8 +46,6 @@ jobs:
 
           mapfile -d '' files < <(
             find artifacts -type f \( \
-              -name '*.deb' -o \
-              -name '*.pkg.tar.zst' -o \
               -name '*.AppImage' -o \
               -name '*.dmg' -o \
               -name '*.app.tar.gz' -o \
