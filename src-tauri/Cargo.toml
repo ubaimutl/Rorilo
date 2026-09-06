@@ -1,0 +1,14 @@
+[package]
+name = "rorilo"
+version = "0.1.0"
+description = "Rorilo desktop app"
+authors = ["Rorilo"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+rusqlite = { version = "0.37", features = ["bundled"] }
+signal-hook = "0.3"
+tauri = { version = "2", features = [] }

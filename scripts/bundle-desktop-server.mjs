@@ -1,0 +1,72 @@
+import { cp, mkdir, rm, stat } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const outDir = path.join(root, 'src-tauri', 'resources', 'server');
+const standaloneDir = path.join(root, '.next', 'standalone');
+const schemaOut = path.join(root, 'src-tauri', 'resources', 'schema.sql');
+
+async function exists(target) {
+  try {
+    await stat(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function copyIfExists(from, to) {
+  if (await exists(from)) {
+    await cp(from, to, { recursive: true, force: true });
+  }
+}
+
+await rm(outDir, { recursive: true, force: true });
+await mkdir(outDir, { recursive: true });
+
+if (!(await exists(path.join(standaloneDir, 'server.js')))) {
+  throw new Error('Next standalone output is missing. Run npm run build first.');
+}
+
+await cp(standaloneDir, outDir, { recursive: true, force: true });
+await rm(path.join(outDir, '.env'), { force: true });
+await mkdir(path.join(outDir, '.next'), { recursive: true });
+await copyIfExists(path.join(root, '.next', 'static'), path.join(outDir, '.next', 'static'));
+await copyIfExists(path.join(root, 'public'), path.join(outDir, 'public'));
+await copyIfExists(path.join(root, 'prisma'), path.join(outDir, 'prisma'));
+
+await mkdir(path.join(outDir, 'node_modules'), { recursive: true });
+await copyIfExists(path.join(root, 'node_modules', 'prisma'), path.join(outDir, 'node_modules', 'prisma'));
+await copyIfExists(path.join(root, 'node_modules', '@prisma'), path.join(outDir, 'node_modules', '@prisma'));
+await copyIfExists(path.join(root, 'node_modules', '.prisma'), path.join(outDir, 'node_modules', '.prisma'));
+
+await rm(schemaOut, { force: true });
+
+const diff = spawnSync(
+  process.platform === 'win32' ? 'npx.cmd' : 'npx',
+  [
+    'prisma',
+    'migrate',
+    'diff',
+    '--from-empty',
+    '--to-schema-datamodel',
+    'prisma/schema.prisma',
+    '--script',
+    '--output',
+    schemaOut,
+  ],
+  { cwd: root, encoding: 'utf8' }
+);
+
+if (diff.status !== 0) {
+  throw new Error(diff.stderr || diff.stdout || 'Could not generate desktop database schema.');
+}
+
+const schemaStats = await stat(schemaOut);
+if (schemaStats.size === 0) {
+  throw new Error('Generated desktop database schema is empty.');
+}
+
+console.log(`Desktop server bundle written to ${path.relative(root, outDir)}`);

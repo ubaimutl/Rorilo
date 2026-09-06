@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="440.923138 421.126110 518.361862 618.562500"
+    role="img"
+    aria-labelledby="title desc"
+>
+  <title id="title">R logo dark</title>
+  <desc
+        id="desc"
+    >Dark version of the Relovia logo for use on dark backgrounds.</desc>
+
+  <!-- Outer circle -->
+  <circle cx="765.335938" cy="838.710938" r="193.949219" fill="#FFFFFF" />
+
+  <!-- Akt Regular lowercase r converted to a vector path; no font dependency -->
+  <path
+        fill="#FFFFFF"
+        transform="translate(354.329388 1039.688610)"
+        d="M 86.59375 0
+           L 86.59375 -618.5625
+           L 205.375 -618.5625
+           L 205.375 -512.171875
+           C 219.394531 -539.390625 241.039062 -563.925781 270.3125 -585.78125
+           C 299.59375 -607.632812 341.453125 -618.5625 395.890625 -618.5625
+           L 433 -618.5625
+           L 433 -509.703125
+           L 386 -509.703125
+           C 324.132812 -509.703125 278.5625 -492.175781 249.28125 -457.125
+           C 220.007812 -422.070312 205.375 -373.617188 205.375 -311.765625
+           L 205.375 0
+           Z"
+    />
+
+  <!-- Inner circle -->
+  <circle cx="765.335938" cy="838.710938" r="119.676758" fill="#000000" />
+</svg>

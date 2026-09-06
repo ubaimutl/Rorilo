@@ -1,0 +1,308 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model UserProfile {
+  id              String   @id @default("default")
+  firstName       String   @default("")
+  lastName        String   @default("")
+  email           String   @default("")
+  phone           String   @default("")
+  city            String   @default("")
+  country         String   @default("")
+  linkedIn        String   @default("")
+  gitHub          String   @default("")
+  portfolio       String   @default("")
+  additionalUrls  String   @default("[]") // JSON string array
+  currentTitle    String   @default("")
+  yearsExperience Float    @default(0)
+  skills          String   @default("[]") // JSON string array
+  technologies    String   @default("[]") // JSON string array
+  languages       String   @default("[]") // JSON string array
+  education       String   @default("[]") // JSON array of objects
+  certifications  String   @default("[]") // JSON array of objects
+  workExperience  String   @default("[]") // JSON array of objects
+  projects        String   @default("[]") // JSON array of objects
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CV {
+  id               String   @id @default(cuid())
+  originalFilename String
+  filePath         String?
+  extractedText    String
+  structuredData   String   @default("{}") // JSON object
+  isActive         Boolean  @default(true)
+  uploadDate       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model JobPreference {
+  id                     String   @id @default("default")
+  desiredTitles          String   @default("[]") // JSON string array
+  keywords               String   @default("[]") // JSON string array
+  excludedKeywords       String   @default("[]") // JSON string array
+  excludedCompanies      String   @default("[]") // JSON string array, plain text or /regex/flags
+  locations              String   @default("[]") // JSON string array
+  remotePreference       String   @default("any") // "remote", "hybrid", "onsite", "any"
+  employmentTypes        String   @default("[]") // JSON string array
+  minSalary              Float?
+  preferredSalary        Float?
+  salaryCurrency         String   @default("USD")
+  industries             String   @default("[]") // JSON string array
+  companySizes           String   @default("[]") // JSON string array
+  preferredTechnologies  String   @default("[]") // JSON string array
+  technologiesToAvoid    String   @default("[]") // JSON string array
+  visaNotes              String   @default("")
+  maxCommute             String   @default("")
+  writingTone            String   @default("professional") // professional, confident, concise, conversational
+  coverLetterLength      String   @default("medium") // short, medium, detailed
+  coverLetterLanguage    String   @default("Auto")
+  emailLength            String   @default("concise") // short, concise, detailed
+  mentionSalary          Boolean  @default(false)
+  mentionAvailability    Boolean  @default(true)
+  writingStyle           String   @default("")
+  aiNotes                String   @default("")
+  additionalInstructions String   @default("")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model AIProviderSettings {
+  id                String   @id @default("default")
+  baseUrl           String   @default("https://api.openai.com/v1")
+  apiKey            String   @default("")
+  model             String   @default("gpt-5.4-mini")
+  temperature       Float    @default(0.3)
+  maxTokens         Int      @default(2000)
+  providerName      String   @default("Primary")
+  fallbackProviders String   @default("[]")
+  structuredOutput  Boolean  @default(true)
+  disableReasoning  Boolean  @default(true)
+  providerOptions   String   @default("{}")
+  isConfigured      Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ApifySettings {
+  id                 String   @id @default("default")
+  apiToken           String   @default("")
+  actorId            String   @default("curious_coder/linkedin-jobs-scraper")
+  actorIds           String   @default("[\"curious_coder/linkedin-jobs-scraper\"]")
+  actorInputTemplate String   @default("{}")
+  isConfigured       Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model EmailSettings {
+  id           String    @id @default("default")
+  providerType String    @default("gmail")
+  userEmail    String    @default("")
+  clientId     String    @default("")
+  clientSecret String    @default("")
+  refreshToken String    @default("")
+  accessToken  String    @default("")
+  tokenExpiry  DateTime?
+  isConfigured Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model LogoSettings {
+  id           String   @id @default("default")
+  apiToken     String   @default("")
+  isConfigured Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model FreeSourceSettings {
+  id              String   @id @default("default")
+  adzunaAppId     String   @default("")
+  adzunaAppKey    String   @default("")
+  techmapKey      String   @default("")
+  enabledSources  String   @default("[\"arbeitsagentur\"]")
+  disabledBoards  String   @default("[]")
+  customBoards    String   @default("[]")
+  isConfigured    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Job {
+  id                   String       @id @default(cuid())
+  source               String       @default("apify") // apify, mock, manual
+  sourceJobId          String?
+  deduplicationHash    String       @unique
+  title                String
+  company              String
+  companyWebsite       String?
+  companyLogo          String?
+  location             String?
+  countryCode          String?
+  remoteType           String       @default("unknown") // remote, hybrid, onsite, unknown
+  employmentType       String? // full-time, part-time, contract, internship
+  salaryMin            Float?
+  salaryMax            Float?
+  salaryCurrency       String?
+  description          String
+  requirements         String       @default("[]") // JSON string array or text
+  responsibilities     String       @default("[]") // JSON string array or text
+  benefits             String       @default("[]") // JSON string array or text
+  technologies         String       @default("[]") // JSON string array
+  seniority            String? // junior, mid, senior, lead, principal
+  languageRequirements String       @default("[]") // JSON string array
+  contactName          String?
+  contactEmail         String?
+  applicationUrl       String?
+  originalUrl          String?
+  datePosted           DateTime?
+  discoveredAt         DateTime     @default(now())
+  viewCount            Int          @default(0)
+  lastViewedAt         DateTime?
+  rawData              String? // JSON string of raw payload
+  analysis             JobAnalysis?
+  match                JobMatch?
+  application          Application?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([company])
+  @@index([title])
+  @@index([countryCode])
+  @@index([remoteType])
+  @@index([discoveredAt])
+}
+
+model DeletedJobFingerprint {
+  id                   String   @id @default(cuid())
+  deduplicationHash    String   @unique
+  title                String
+  company              String
+  normalizedTitle      String
+  normalizedCompany    String
+  normalizedUrl        String   @default("")
+  descriptionSignature String   @default("")
+  source               String   @default("")
+  deletedAt            DateTime @default(now())
+  createdAt            DateTime @default(now())
+
+  @@index([normalizedCompany])
+  @@index([normalizedTitle])
+  @@index([normalizedUrl])
+}
+
+model JobAnalysis {
+  id                   String   @id @default(cuid())
+  jobId                String   @unique
+  job                  Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  requiredSkills       String   @default("[]") // JSON string array
+  preferredSkills      String   @default("[]") // JSON string array
+  yearsExperienceMin   Int?
+  technologies         String   @default("[]") // JSON string array
+  seniority            String?
+  education            String?
+  languageRequirements String   @default("[]") // JSON string array
+  remoteStatus         String?
+  locationRestrictions String?
+  salaryExtracted      String?
+  responsibilities     String   @default("[]") // JSON string array
+  benefits             String   @default("[]") // JSON string array
+  contactEmail         String?
+  applicationMethod    String   @default("UNKNOWN") // EMAIL, EXTERNAL_URL, UNKNOWN
+  warnings             String   @default("[]") // JSON string array
+  modelUsed            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model JobMatch {
+  id               String   @id @default(cuid())
+  jobId            String   @unique
+  job              Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  matchScore       Int      @default(0) // 0 - 100
+  skillsScore      Int      @default(0)
+  roleScore        Int      @default(0)
+  experienceScore  Int      @default(0)
+  locationScore    Int      @default(0)
+  languageScore    Int      @default(0)
+  salaryScore      Int      @default(0)
+  preferencesScore Int      @default(0)
+  strongMatches    String   @default("[]") // JSON string array
+  possibleIssues   String   @default("[]") // JSON string array
+  missingSkills    String   @default("[]") // JSON string array
+  aiInterpretation String?
+  triageStatus     String   @default("UNREVIEWED") // UNREVIEWED, WORTH_APPLYING, MAYBE, SKIP
+  triageReason     String   @default("")
+  aiMatchScore     Int?
+  aiScoredAt       DateTime?
+  triagedAt        DateTime?
+  lastCalculatedAt DateTime @default(now())
+}
+
+model Application {
+  id         String                @id @default(cuid())
+  jobId      String                @unique
+  job        Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status     String                @default("NEW") // NEW, SAVED, IGNORED, PREPARING, READY, DRAFT_CREATED, APPLIED, INTERVIEW, REJECTED, OFFER, WITHDRAWN
+  method     String                @default("UNKNOWN") // EMAIL, EXTERNAL_URL, UNKNOWN
+  notes      String                @default("")
+  appliedAt  DateTime?
+  followUpAt DateTime?
+  documents  ApplicationDocument[]
+  events     ApplicationEvent[]
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@index([status])
+}
+
+model ApplicationDocument {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  type          String // COVER_LETTER, EMAIL_DRAFT, ANSWERS, INTRODUCTION, CUSTOM_CV
+  title         String
+  content       String
+  version       Int         @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([applicationId, type])
+}
+
+model ApplicationEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  eventType     String // DISCOVERED, PREPARED, COVER_LETTER_GENERATED, DRAFT_CREATED, APPLIED, INTERVIEW_SCHEDULED, STATUS_CHANGED, NOTE_ADDED
+  description   String
+  metadata      String      @default("{}") // JSON object
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+model SearchRun {
+  id               String    @id @default(cuid())
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  source           String    @default("apify")
+  searchParameters String    @default("{}") // JSON string
+  jobsDiscovered   Int       @default(0)
+  newJobs          Int       @default(0)
+  duplicateJobs    Int       @default(0)
+  status           String    @default("RUNNING") // RUNNING, COMPLETED, FAILED
+  error            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}

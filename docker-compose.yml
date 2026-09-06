@@ -1,0 +1,19 @@
+services:
+  rorilo:
+    image: ghcr.io/ubaimutl/rorilo:latest
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "file:/data/rorilo.db"
+      AI_BASE_URL: "${AI_BASE_URL:-https://api.openai.com/v1}"
+      AI_API_KEY: "${AI_API_KEY:-}"
+      AI_MODEL: "${AI_MODEL:-gpt-5.4-mini}"
+      APIFY_TOKEN: "${APIFY_TOKEN:-}"
+      LOGO_DEV_TOKEN: "${LOGO_DEV_TOKEN:-}"
+    volumes:
+      - rorilo-data:/data
+
+volumes:
+  rorilo-data:
