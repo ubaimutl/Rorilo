@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::TcpStream;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -41,6 +41,52 @@ fn node_path(resource_dir: &std::path::Path) -> PathBuf {
     {
         resource_dir.join("node").join("bin").join("node")
     }
+}
+
+fn resource_candidates(resource_dir: &Path) -> Vec<PathBuf> {
+    let mut candidates = vec![
+        resource_dir.to_path_buf(),
+        resource_dir.join("resources"),
+        resource_dir.join("Rorilo").join("resources"),
+        resource_dir.join("rorilo").join("resources"),
+        resource_dir.join("lib").join("Rorilo").join("resources"),
+        resource_dir.join("lib").join("rorilo").join("resources"),
+    ];
+
+    if let Some(parent) = resource_dir.parent() {
+        candidates.push(parent.join("Rorilo").join("resources"));
+        candidates.push(parent.join("rorilo").join("resources"));
+        candidates.push(parent.join("lib").join("Rorilo").join("resources"));
+        candidates.push(parent.join("lib").join("rorilo").join("resources"));
+    }
+
+    if let Some(app_dir) = env_path("APPDIR") {
+        candidates.push(app_dir.join("usr").join("lib").join("Rorilo").join("resources"));
+        candidates.push(app_dir.join("usr").join("lib").join("rorilo").join("resources"));
+    }
+
+    candidates
+}
+
+fn resolve_resource_dir(resource_dir: &Path) -> Result<PathBuf, String> {
+    let candidates = resource_candidates(resource_dir);
+
+    for candidate in &candidates {
+        if candidate.join("schema.sql").is_file()
+            && candidate.join("server").join("server.js").is_file()
+            && node_path(candidate).is_file()
+        {
+            return Ok(candidate.to_path_buf());
+        }
+    }
+
+    let searched = candidates
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    Err(format!("Could not find bundled Rorilo resources. Searched: {searched}"))
 }
 
 fn wait_ready(port: u16, timeout: Duration) -> bool {
@@ -192,6 +238,7 @@ fn main() {
         .manage(Sidecar(managed))
         .setup(move |app| {
             let resource_dir = app.path().resource_dir().expect("resource dir");
+            let resource_dir = resolve_resource_dir(&resource_dir).expect("find bundled resources");
             let data_dir = env_path("RORILO_DATA_DIR")
                 .unwrap_or_else(|| app.path().app_data_dir().expect("app data dir"));
             std::fs::create_dir_all(&data_dir).expect("create data dir");
@@ -218,7 +265,13 @@ fn main() {
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .spawn()
-                .expect("spawn Rorilo server");
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "spawn Rorilo server with node '{}' in '{}': {error}",
+                        node.display(),
+                        server_dir.display()
+                    )
+                });
 
             *sidecar.lock().unwrap() = Some(child);
 
@@ -265,4 +318,50 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("run app");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_resource_dir;
+    use std::fs;
+    use std::path::Path;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn make_resource_dir(path: &Path) {
+        fs::create_dir_all(path.join("server")).unwrap();
+        fs::create_dir_all(path.join("node").join("bin")).unwrap();
+        fs::write(path.join("schema.sql"), "").unwrap();
+        fs::write(path.join("server").join("server.js"), "").unwrap();
+        fs::write(path.join("node").join("bin").join("node"), "").unwrap();
+    }
+
+    #[test]
+    fn resolves_direct_resource_dir() {
+        let root = std::env::temp_dir().join(format!(
+            "rorilo-resource-test-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let resources = root.join("resources");
+        make_resource_dir(&resources);
+
+        let resolved = resolve_resource_dir(&resources).unwrap();
+
+        assert_eq!(resolved, resources);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn resolves_linux_appimage_usr_lib_layout() {
+        let root = std::env::temp_dir().join(format!(
+            "rorilo-appdir-test-{}",
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+        ));
+        let resources = root.join("usr").join("lib").join("Rorilo").join("resources");
+        make_resource_dir(&resources);
+
+        let resolved = resolve_resource_dir(&root.join("usr")).unwrap();
+
+        assert_eq!(resolved, resources);
+        fs::remove_dir_all(root).unwrap();
+    }
 }
