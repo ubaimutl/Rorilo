@@ -42,7 +42,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libarchive-tools zstd
 
       - run: npm ci
 
@@ -59,12 +59,17 @@ jobs:
       - name: Build desktop app
         run: npm run desktop:package-native
 
+      - name: Build Arch Linux package
+        if: runner.os == 'Linux'
+        run: npm run desktop:package-arch
+
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
         with:
           name: rorilo-${{ matrix.name }}
           path: |
             src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.pkg.tar.zst
             src-tauri/target/release/bundle/**/*.AppImage
             src-tauri/target/release/bundle/**/*.dmg
             src-tauri/target/release/bundle/**/*.app.tar.gz
@@ -93,6 +98,7 @@ jobs:
           body: Desktop builds for Rorilo.
           files: |
             artifacts/**/*.deb
+            artifacts/**/*.pkg.tar.zst
             artifacts/**/*.AppImage
             artifacts/**/*.dmg
             artifacts/**/*.app.tar.gz

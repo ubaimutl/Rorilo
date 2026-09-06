@@ -8,6 +8,7 @@
     "desktop:bundle-server": "node scripts/bundle-desktop-server.mjs",
     "desktop:prepare-node": "node scripts/prepare-desktop-node.mjs",
     "desktop:package-native": "node scripts/build-desktop-native.mjs",
+    "desktop:package-arch": "node scripts/package-arch.mjs",
     "desktop:build": "npm run build && npm run desktop:bundle-server && npm run desktop:prepare-node && npm run desktop:package-native",
     "start": "next start",
     "lint": "eslint",
