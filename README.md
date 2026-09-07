@@ -2,34 +2,63 @@
 
 **Local-first AI job search and application assistant.**
 
-Rorilo helps you discover jobs across multiple sources, compare them against your CV, prepare tailored application materials, and track every application from one place.
+Rorilo helps you discover jobs across multiple sources, evaluate how well they match your profile, generate tailored cover letters and recruiter emails, and track every application from one place.
 
-Your profile, jobs, drafts, and settings stay on your machine. Rorilo is intentionally **not** a blind auto-apply tool: it prepares and organizes the repetitive parts while you stay in control of what gets submitted.
+Your profile, jobs, drafts, and settings stay on your machine. Rorilo does not blindly auto-apply: it handles the repetitive research and preparation while you decide what gets submitted.
+
+<details>
+<summary>Table of contents</summary>
+
+- [Screenshots](#screenshots)
+- [Download](#download)
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Job sources](#job-sources)
+- [Privacy](#privacy)
+- [Code Signing Policy](#code-signing-policy)
+- [Docker](#docker)
+- [Development from source](#development-from-source)
+- [Environment variables](#environment-variables)
+- [Project structure](#project-structure)
+- [Contributing](#contributing)
+- [Getting the best results](#getting-the-best-results)
+- [Current limitations](#current-limitations)
+- [License](#license)
+
+</details>
+
+## Screenshots
+
+![Rorilo drafts screen](public/screenshots/demo-1-drafts.png)
+
+![Rorilo discover screen](public/screenshots/demo-2-discover.png)
+
+![Rorilo tracker board](public/screenshots/demo-3-tracker.png)
 
 ## Download
 
 Desktop builds are available from the [latest GitHub release](https://github.com/ubaimutl/Rorilo/releases/latest).
 
-| Platform | Package |
-| --- | --- |
-| Windows | `.exe` installer or `.msi` |
-| macOS Apple Silicon | `aarch64.dmg` |
-| macOS Intel | `x64.dmg` |
-| Linux | `.AppImage` |
+| Platform            | Package                    |
+| ------------------- | -------------------------- |
+| Windows             | `.exe` installer or `.msi` |
+| macOS Apple Silicon | `aarch64.dmg`              |
+| macOS Intel         | `x64.dmg`                  |
+| Linux               | `.AppImage`                |
 
 The desktop app includes the local runtime and database setup. You do **not** need Node.js, npm, Docker, or a separate database server to use the desktop build.
 
 ## Features
 
-- Search jobs from free feeds, public company career boards, and optional Apify actors.
-- Match jobs against your CV, skills, preferences, location, language, and salary targets.
-- Deduplicate repeated listings across different sources.
-- Avoid re-adding jobs you already deleted or excluded.
-- Generate grounded cover letters, recruiter emails, and screening-question answers.
-- Use your preferred OpenAI-compatible AI provider.
+- Discover jobs across multiple public sources, ATS boards, and optional Apify actors.
+- Score and triage roles as **Worth applying**, **Maybe**, or **Skip** using your actual profile and preferences.
+- Generate grounded cover letters, recruiter emails, and screening-question answers without inventing experience.
+- Explain strong matches, missing skills, and potential issues for each role.
+- Deduplicate repeated listings and remember jobs you already removed.
 - Export application materials as styled PDFs.
-- Track applications through draft, applied, interview, offer, rejection, and archive states.
 - Create Gmail drafts for review before sending.
+- Track applications through applied, interview, offer, rejection, and archive states.
+- Use any supported OpenAI-compatible AI provider.
 - Keep your core data in a local SQLite database.
 
 ## How it works
@@ -144,21 +173,21 @@ npx prisma db push
 
 ## Environment variables
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | yes | Prisma database connection. Defaults to local SQLite in `.env.example`. |
-| `AI_BASE_URL` | no | OpenAI-compatible API base URL. |
-| `AI_API_KEY` | no | Model provider key. Can also be saved from Settings. |
-| `AI_MODEL` | no | Default model name. |
-| `APIFY_TOKEN` | no | Enables Apify-based job search. |
-| `APIFY_ACTOR_ID` | no | Optional default Apify Actor. Multiple Actors can be managed in Settings. |
-| `ADZUNA_APP_ID` | no | Enables Adzuna search. |
-| `ADZUNA_APP_KEY` | no | Enables Adzuna search. |
-| `TECHMAP_API_KEY` | no | Enables Techmap search. |
-| `LOGO_DEV_TOKEN` | no | Logo.dev publishable key for company logos. |
-| `GOOGLE_CLIENT_ID` | no | Gmail draft integration. |
-| `GOOGLE_CLIENT_SECRET` | no | Gmail draft integration. |
-| `GOOGLE_REDIRECT_URI` | no | OAuth callback URL for Gmail integration. |
+| Variable               | Required | Purpose                                                                   |
+| ---------------------- | -------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL`         | yes      | Prisma database connection. Defaults to local SQLite in `.env.example`.   |
+| `AI_BASE_URL`          | no       | OpenAI-compatible API base URL.                                           |
+| `AI_API_KEY`           | no       | Model provider key. Can also be saved from Settings.                      |
+| `AI_MODEL`             | no       | Default model name.                                                       |
+| `APIFY_TOKEN`          | no       | Enables Apify-based job search.                                           |
+| `APIFY_ACTOR_ID`       | no       | Optional default Apify Actor. Multiple Actors can be managed in Settings. |
+| `ADZUNA_APP_ID`        | no       | Enables Adzuna search.                                                    |
+| `ADZUNA_APP_KEY`       | no       | Enables Adzuna search.                                                    |
+| `TECHMAP_API_KEY`      | no       | Enables Techmap search.                                                   |
+| `LOGO_DEV_TOKEN`       | no       | Logo.dev publishable key for company logos.                               |
+| `GOOGLE_CLIENT_ID`     | no       | Gmail draft integration.                                                  |
+| `GOOGLE_CLIENT_SECRET` | no       | Gmail draft integration.                                                  |
+| `GOOGLE_REDIRECT_URI`  | no       | OAuth callback URL for Gmail integration.                                 |
 
 ## Project structure
 
@@ -188,6 +217,14 @@ Contributions are welcome, especially for:
 - accessibility and UX improvements
 
 Please keep integrations modular and normalize discovered jobs through Rorilo's existing job-source interfaces.
+
+## Getting the best results
+
+Rorilo's results depend heavily on the AI provider you choose and the profile you set up. Spend a few minutes adding a clear CV, target roles, skills, locations, salary expectations, writing style, and notes. Better profile data produces better matches and better drafts.
+
+**Recommended model: `gpt-5.4-mini`.** In testing, it has produced the most reliable results for Rorilo's mix of job analysis, structured matching, cover-letter generation, and recruiter emails. Other OpenAI-compatible models can be used, but results may vary significantly.
+
+Smaller local or very cheap models can work, but they may return weaker matches, invalid structured output, or less polished application material.
 
 ## Current limitations
 
