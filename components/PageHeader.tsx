@@ -14,7 +14,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, back, badge, actions }: PageHeaderProps) {
   return (
-    <header className="min-h-16 px-4 sm:px-6 md:px-10 py-3 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 sticky top-0 bg-background/95 backdrop-blur-xs z-10 shrink-0">
+    <header className="min-h-16 px-4 sm:px-6 md:px-10 py-3 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 bg-background/95 backdrop-blur-xs z-10 shrink-0 md:sticky md:top-0">
       <div className="min-w-0 flex-1">
         {back && (
           <Link

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, Sparkles, Layers, User, Settings, ListChecks, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react';
+import { Briefcase, Sparkles, Layers, User, Settings, ListChecks, ChevronsLeft, ChevronsRight, Menu, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
@@ -24,6 +24,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     try {
@@ -36,6 +37,13 @@ export function Sidebar() {
     } catch {
       /* ignore */
     }
+  }, []);
+
+  useEffect(() => {
+    const updateScrollTop = () => setShowScrollTop(window.scrollY > 320);
+    updateScrollTop();
+    window.addEventListener('scroll', updateScrollTop, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollTop);
   }, []);
 
   const toggleCollapsed = () => {
@@ -65,18 +73,59 @@ export function Sidebar() {
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const activeItem = NAV_ITEMS.find((item) =>
+    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+  );
+  const activeLabel = activeItem ? t(activeItem.labelKey) : t('nav.settings');
+
   return (
     <>
       {collapsed && (
-        <button
-          type="button"
-          onClick={() => setCollapsedPersistent(false)}
-          aria-label="Open navigation"
-          title="Open navigation"
-          className="md:hidden fixed bottom-4 left-4 z-40 flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg cursor-pointer"
-        >
-          <Menu className="size-5" />
-        </button>
+        <div className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground">
+          <button
+            type="button"
+            onClick={() => setCollapsedPersistent(false)}
+            aria-label="Open navigation"
+            title="Open navigation"
+            className="flex size-9 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground shadow-xs cursor-pointer"
+          >
+            <Menu className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={scrollToTop}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            aria-label="Scroll to top"
+            title="Scroll to top"
+          >
+            <img
+              src="/logos/logo-light.svg"
+              alt=""
+              className="size-6 shrink-0 object-contain dark:hidden"
+            />
+            <img
+              src="/logos/logo-dark.svg"
+              alt=""
+              className="hidden size-6 shrink-0 object-contain dark:block"
+            />
+            <span className="min-w-0 truncate text-sm font-semibold text-sidebar-primary">{activeLabel}</span>
+          </button>
+          {showScrollTop && (
+            <button
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Scroll to top"
+              title="Scroll to top"
+              className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-primary"
+            >
+              <ChevronUp className="size-5" />
+            </button>
+          )}
+        </div>
       )}
       {!collapsed && (
         <div

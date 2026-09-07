@@ -43,7 +43,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-row bg-background text-foreground font-sans">
+      <body className="min-h-full flex flex-col md:flex-row bg-background text-foreground font-sans">
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -56,7 +56,7 @@ export default function RootLayout({
         />
         <I18nProvider>
           <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+          <div className="flex-1 flex flex-col min-w-0 min-h-screen md:h-screen md:overflow-y-auto">
             <FirstRunSetupDialog />
             {children}
           </div>

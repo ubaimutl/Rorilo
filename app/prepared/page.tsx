@@ -402,7 +402,7 @@ export default function PreparedJobsPage() {
     selectedDraftInactiveDays >= 3;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-background h-screen overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 bg-background min-h-screen md:h-screen md:overflow-hidden">
       <PageHeader
         title={t('drafts.title')}
         description={t('drafts.description')}
@@ -518,7 +518,7 @@ export default function PreparedJobsPage() {
           {selectedJob ? (
             <div className="flex-1 flex flex-col min-h-0">
               {/* Right Panel Header */}
-              <div className="px-4 sm:px-8 py-5 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-background sticky top-0 z-10 shrink-0">
+              <div className="px-4 sm:px-8 py-5 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-background z-10 shrink-0 md:sticky md:top-0">
                 <div className="min-w-0 max-w-full">
                   <button
                     type="button"
