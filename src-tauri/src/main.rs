@@ -9,6 +9,9 @@ use std::time::{Duration, Instant};
 use tauri::webview::{DownloadEvent, NewWindowResponse, Url};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 type SharedChild = Arc<Mutex<Option<Child>>>;
 
 struct Sidecar(SharedChild);
@@ -195,6 +198,38 @@ fn handle_download(app: AppHandle, event: DownloadEvent<'_>) -> bool {
     true
 }
 
+fn spawn_server(
+    node: &Path,
+    server_dir: &Path,
+    port: &str,
+    database_url: &str,
+) -> Result<Child, String> {
+    let mut command = Command::new(node);
+    command
+        .arg("server.js")
+        .current_dir(server_dir)
+        .env("PORT", port)
+        .env("DATABASE_URL", database_url)
+        .env("HOSTNAME", "127.0.0.1")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    command.spawn().map_err(|error| {
+        format!(
+            "Could not start Rorilo server with node '{}' in '{}': {error}",
+            node.display(),
+            server_dir.display()
+        )
+    })
+}
+
 fn init_database(db_path: &PathBuf, schema_path: &PathBuf) -> Result<(), String> {
     if db_path
         .metadata()
@@ -255,23 +290,7 @@ fn main() {
 
             init_database(&db_path, &schema_path).expect("prepare database");
 
-            let child = Command::new(&node)
-                .arg("server.js")
-                .current_dir(&server_dir)
-                .env("PORT", &port)
-                .env("DATABASE_URL", &database_url)
-                .env("HOSTNAME", "127.0.0.1")
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .unwrap_or_else(|error| {
-                    panic!(
-                        "spawn Rorilo server with node '{}' in '{}': {error}",
-                        node.display(),
-                        server_dir.display()
-                    )
-                });
+            let child = spawn_server(&node, &server_dir, &port, &database_url)?;
 
             *sidecar.lock().unwrap() = Some(child);
 
