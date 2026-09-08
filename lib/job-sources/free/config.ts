@@ -8,7 +8,7 @@ export interface FreeSourceKeys {
   techmapKey: string;
 }
 
-const DEFAULT_ENABLED_SOURCES = ['arbeitsagentur'];
+const DEFAULT_ENABLED_SOURCES: string[] = [];
 
 function parseStringArray(value: unknown): string[] {
   const out: string[] = [];

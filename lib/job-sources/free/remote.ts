@@ -119,10 +119,18 @@ type JobicyItem = {
   jobDescription?: string;
   jobExcerpt?: string;
   jobGeo?: string;
-  jobIndustry?: string;
-  jobType?: string;
+  jobIndustry?: string | string[];
+  jobType?: string | string[];
   pubDate?: string;
 };
+
+function jobicyText(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    const parts = value.filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
+    return parts.length > 0 ? parts.join(', ') : undefined;
+  }
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
 
 export function normalizeJobicy(item: JobicyItem): NormalizedJobInput {
   const description = sanitizeDescription(item.jobDescription || item.jobExcerpt || '');
@@ -135,7 +143,7 @@ export function normalizeJobicy(item: JobicyItem): NormalizedJobInput {
     companyLogo: item.companyLogo || undefined,
     location,
     remoteType: detectRemoteType(item.jobTitle || '', location, description),
-    employmentType: item.jobType || undefined,
+    employmentType: jobicyText(item.jobType),
     description,
     requirements: [],
     responsibilities: [],
@@ -149,23 +157,16 @@ export function normalizeJobicy(item: JobicyItem): NormalizedJobInput {
   };
 }
 
-function jobicyGeo(country?: string): string {
-  const code = normalizeCountryCode(country);
-  if (code === 'US') return 'usa';
-  if (code === 'CA') return 'canada';
-  if (countryRegion(code) === 'EU') return 'europe';
-  return 'worldwide';
-}
-
 export async function searchJobicy(params: JobSearchParams): Promise<JobSourceSearchResult> {
   const limit = Math.max(1, Math.min(params.limit || 20, 60));
-  const query = new URLSearchParams({
-    count: '200',
-    geo: jobicyGeo(params.country),
-    industry: 'engineering',
-  });
+  // Jobicy's public endpoint occasionally rejects otherwise valid geo and
+  // industry combinations with HTTP 400. Fetch the stable base feed and
+  // apply Rorilo's country and keyword filters locally.
+  const query = new URLSearchParams({ count: '100' });
   const data = (await cachedFetchJson(`jobicy:${query.toString()}`, HOUR, () =>
-    fetchJson(`https://jobicy.com/api/v2/remote-jobs?${query.toString()}`)
+    fetchJson(`https://jobicy.com/api/v2/remote-jobs?${query.toString()}`, {
+      headers: { 'User-Agent': 'Rorilo job search (https://github.com/ubaimutl/Rorilo)' },
+    })
   )) as { jobs?: JobicyItem[] };
   if (!data || !Array.isArray(data.jobs)) {
     throw new Error('Jobicy returned an unexpected response. Try again later.');
