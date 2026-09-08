@@ -866,3 +866,162 @@ export function downloadCoverLetterPdf(data: CoverLetterPdfData, filename?: stri
     .replace(/\s+/g, "_");
   doc.save(filename || `Cover_Letter_${cleanName}.pdf`);
 }
+
+export interface TrackerPdfApplication {
+  status: string;
+  title: string;
+  company: string;
+  location?: string | null;
+  updatedAt?: string | Date | null;
+  appliedAt?: string | Date | null;
+  score?: number | null;
+}
+
+export interface TrackerPdfOptions {
+  from?: string;
+  to?: string;
+  statusLabels: Record<string, string>;
+  title?: string;
+}
+
+function formatTrackerDate(value?: string | Date | null): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function fitPdfLine(doc: jsPDF, line: string, width: number): string {
+  if (doc.getTextWidth(line) <= width) return line;
+  let fitted = line.trim();
+  while (fitted.length > 1 && doc.getTextWidth(`${fitted}...`) > width) {
+    fitted = fitted.slice(0, -1).trimEnd();
+  }
+  return fitted.length > 1 ? `${fitted}...` : "";
+}
+
+export function createTrackerApplicationsDoc(
+  applications: TrackerPdfApplication[],
+  options: TrackerPdfOptions
+): jsPDF {
+  const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  const margin = 36;
+  const headerTop = 34;
+  const tableTop = 92;
+  const rowPadY = 7;
+  const lineHeight = 10;
+  const minRowHeight = 28;
+  const columns = [
+    { key: "status", label: "Status", x: margin, w: 72 },
+    { key: "title", label: "Role", x: margin + 78, w: 152 },
+    { key: "company", label: "Company", x: margin + 236, w: 118 },
+    { key: "location", label: "Location", x: margin + 360, w: 86 },
+    { key: "date", label: "Date", x: margin + 452, w: 58 },
+    { key: "score", label: "Score", x: margin + 516, w: 36 },
+  ] as const;
+  const tableRight = pw - margin;
+  const sorted = [...applications].sort((a, b) => {
+    const statusA = options.statusLabels[a.status] || a.status;
+    const statusB = options.statusLabels[b.status] || b.status;
+    if (statusA !== statusB) return statusA.localeCompare(statusB);
+    const dateA = new Date(a.appliedAt || a.updatedAt || 0).getTime();
+    const dateB = new Date(b.appliedAt || b.updatedAt || 0).getTime();
+    return dateB - dateA;
+  });
+
+  function rangeText() {
+    return [
+      options.from ? `From ${formatTrackerDate(options.from)}` : null,
+      options.to ? `To ${formatTrackerDate(options.to)}` : null,
+    ]
+      .filter(Boolean)
+      .join("  ") || "All tracked applications";
+  }
+
+  function drawHeader(page: number) {
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pw, ph, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text(options.title || "Application tracker", margin, headerTop);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(rangeText(), margin, headerTop + 16);
+    doc.text(`Page ${page}`, pw - margin, headerTop, { align: "right" });
+
+    doc.setDrawColor(203, 213, 225);
+    doc.line(margin, tableTop - 14, tableRight, tableTop - 14);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margin, tableTop - 12, tableRight - margin, 22, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(51, 65, 85);
+    columns.forEach((column) => doc.text(column.label, column.x, tableTop + 2));
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, tableTop + 10, tableRight, tableTop + 10);
+  }
+
+  function valueFor(app: TrackerPdfApplication, key: (typeof columns)[number]["key"]) {
+    if (key === "status") return options.statusLabels[app.status] || app.status;
+    if (key === "title") return app.title;
+    if (key === "company") return app.company;
+    if (key === "location") return app.location || "";
+    if (key === "date") return formatTrackerDate(app.appliedAt || app.updatedAt);
+    if (key === "score") return app.score === null || app.score === undefined ? "" : `${app.score}%`;
+    return "";
+  }
+
+  let page = 1;
+  let y = tableTop + 28;
+  drawHeader(page);
+
+  sorted.forEach((app, index) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.6);
+    const wrapped = columns.map((column) => doc.splitTextToSize(valueFor(app, column.key), column.w) as string[]);
+    const rowHeight = Math.max(minRowHeight, rowPadY * 2 + Math.max(...wrapped.map((lines) => lines.length)) * lineHeight);
+
+    if (y + rowHeight > ph - margin) {
+      doc.addPage("a4", "portrait");
+      page += 1;
+      y = tableTop + 28;
+      drawHeader(page);
+    }
+
+    if (index % 2 === 0) {
+      doc.setFillColor(250, 252, 255);
+      doc.rect(margin, y - rowPadY, tableRight - margin, rowHeight, "F");
+    }
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y + rowHeight - rowPadY, tableRight, y + rowHeight - rowPadY);
+
+    wrapped.forEach((lines, colIndex) => {
+      const column = columns[colIndex];
+      const isPrimary = column.key === "title";
+      doc.setFont("helvetica", isPrimary ? "bold" : "normal");
+      doc.setFontSize(isPrimary ? 7.8 : 7.4);
+      doc.setTextColor(isPrimary ? 15 : 71, isPrimary ? 23 : 85, isPrimary ? 42 : 105);
+      const fittedLines = lines.slice(0, 3).map((line) => fitPdfLine(doc, line, column.w));
+      doc.text(fittedLines, column.x, y, { lineHeightFactor: 1.25 });
+    });
+
+    y += rowHeight;
+  });
+
+  return doc;
+}
+
+export function downloadTrackerApplicationsPdf(
+  applications: TrackerPdfApplication[],
+  options: TrackerPdfOptions,
+  filename = "Rorilo_Tracker.pdf"
+): void {
+  const doc = createTrackerApplicationsDoc(applications, options);
+  doc.save(filename);
+}

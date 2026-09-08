@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, LayoutGrid, List, ChevronRight, ChevronLeft, KanbanSquare } from 'lucide-react';
+import { ArrowRight, LayoutGrid, List, ChevronRight, ChevronLeft, KanbanSquare, Download } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScoreRing, displayMatchScore, isAiCalibrated } from '@/components/ScoreRing';
 import { CompanyLogo } from '@/components/CompanyLogo';
 import { useI18n } from '@/components/I18nProvider';
+import { downloadTrackerApplicationsPdf } from '@/lib/pdf/generatePdf';
+import { notify } from '@/components/AppNotifications';
 
 const COLUMNS = [
   { id: 'APPLIED', labelKey: 'tracker.colApplied' as const, dot: 'bg-indigo-500' },
@@ -29,6 +31,8 @@ export default function ApplicationsPage() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [draggingAppId, setDraggingAppId] = useState<string | null>(null);
   const [dropStatus, setDropStatus] = useState<string | null>(null);
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -91,6 +95,70 @@ export default function ApplicationsPage() {
     handleStatusChange(app.id, app.job.id, status);
   };
 
+  const getExportDate = (app: any) => {
+    const raw = app.appliedAt || app.updatedAt || app.createdAt;
+    const date = raw ? new Date(raw) : null;
+    return date && !Number.isNaN(date.getTime()) ? date : null;
+  };
+
+  const getExportApplications = () => {
+    const fromDate = exportFrom ? new Date(`${exportFrom}T00:00:00`) : null;
+    const toDate = exportTo ? new Date(`${exportTo}T23:59:59`) : null;
+
+    return applications.filter((app) => {
+      const date = getExportDate(app);
+      if (!date) return !fromDate && !toDate;
+      if (fromDate && date < fromDate) return false;
+      if (toDate && date > toDate) return false;
+      return true;
+    });
+  };
+
+  const handleExportPdf = () => {
+    if (exportFrom && exportTo && exportFrom > exportTo) {
+      notify({
+        type: 'error',
+        title: t('tracker.exportInvalidTitle'),
+        message: t('tracker.exportInvalidMsg'),
+      });
+      return;
+    }
+
+    const items = getExportApplications();
+    if (items.length === 0) {
+      notify({
+        type: 'info',
+        title: t('tracker.exportEmptyTitle'),
+        message: t('tracker.exportEmptyMsg'),
+      });
+      return;
+    }
+
+    downloadTrackerApplicationsPdf(
+      items.map((app) => ({
+        status: app.status,
+        title: app.job.title,
+        company: app.job.company,
+        location: app.job.location,
+        appliedAt: app.appliedAt,
+        updatedAt: app.updatedAt,
+        score: app.job.match ? displayMatchScore(app.job.match) : null,
+      })),
+      {
+        from: exportFrom,
+        to: exportTo,
+        title: t('tracker.exportTitle'),
+        statusLabels: Object.fromEntries(COLUMNS.map((col) => [col.id, t(col.labelKey)])),
+      },
+      `Rorilo_Tracker_${new Date().toISOString().slice(0, 10)}.pdf`
+    );
+    notify({
+      type: 'success',
+      title: t('tracker.exportStartedTitle'),
+      message: t('tracker.exportStartedMsg', { count: items.length }),
+    });
+  };
+
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-background">
       <PageHeader
@@ -102,36 +170,72 @@ export default function ApplicationsPage() {
           </span>
         }
         actions={
-          <div className="flex items-center gap-0.5 border border-neutral-200 rounded-lg p-1 bg-white">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                viewMode === 'kanban'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900'
-              }`}
-              title={t('tracker.board')}
-            >
-              <LayoutGrid className="size-4" />
-              <span>{t('tracker.board')}</span>
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                viewMode === 'list'
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900'
-              }`}
-              title={t('tracker.list')}
-            >
-              <List className="size-4" />
-              <span>{t('tracker.list')}</span>
-            </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {applications.length > 0 && (
+              <Button onClick={handleExportPdf} variant="outline" size="sm" className="h-9 text-sm">
+                <Download className="size-4" />
+                <span>{t('tracker.exportPdf')}</span>
+              </Button>
+            )}
+            <div className="flex items-center gap-0.5 border border-neutral-200 rounded-lg p-1 bg-white">
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  viewMode === 'kanban'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-neutral-500 hover:text-neutral-900'
+                }`}
+                title={t('tracker.board')}
+              >
+                <LayoutGrid className="size-4" />
+                <span>{t('tracker.board')}</span>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'text-neutral-500 hover:text-neutral-900'
+                }`}
+                title={t('tracker.list')}
+              >
+                <List className="size-4" />
+                <span>{t('tracker.list')}</span>
+              </button>
+            </div>
           </div>
         }
       />
 
       <main className="p-6 md:p-8 flex-1 overflow-x-auto">
+        {!loading && applications.length > 0 && (
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-neutral-900">{t('tracker.exportRange')}</p>
+              <p className="text-xs text-neutral-500">{t('tracker.exportRangeHint')}</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex items-center gap-2 text-xs font-medium text-neutral-600">
+                <span>{t('tracker.exportFrom')}</span>
+                <input
+                  type="date"
+                  value={exportFrom}
+                  onChange={(event) => setExportFrom(event.target.value)}
+                  className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm text-neutral-900 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs font-medium text-neutral-600">
+                <span>{t('tracker.exportTo')}</span>
+                <input
+                  type="date"
+                  value={exportTo}
+                  onChange={(event) => setExportTo(event.target.value)}
+                  className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm text-neutral-900 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+              </label>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="flex flex-col md:flex-row gap-4 items-stretch min-w-[950px] pb-10" aria-label={t('tracker.loading')}>
             {[0, 1, 2, 3].map((col) => (

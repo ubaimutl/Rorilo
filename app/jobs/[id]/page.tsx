@@ -540,15 +540,22 @@ export default function JobDetailPage() {
           <aside className="flex flex-col gap-4 lg:sticky lg:top-24">
             <Card>
               <CardContent className="flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                  <ScoreRing score={score} size={68} calibrated={calibrated} />
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900">{t('drafts.overall')}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      {t('drafts.deterministic')}
-                    </p>
+                {match ? (
+                  <div className="flex items-center gap-4">
+                    <ScoreRing score={score} size={68} calibrated={calibrated} />
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900">{t('drafts.overall')}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        {t('drafts.deterministic')}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <Alert>
+                    <TriangleAlert />
+                    <AlertDescription>{t('jobdetail.profileNeeded')}</AlertDescription>
+                  </Alert>
+                )}
 
                 {match?.aiInterpretation && (
                   <p className="text-sm text-neutral-600 leading-relaxed">

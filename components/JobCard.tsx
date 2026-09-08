@@ -112,6 +112,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
     onSelectToggle?.(job.id);
   };
 
+  const hasScore = Boolean(job.match);
   const score = displayMatchScore(job.match);
   const calibrated = isAiCalibrated(job.match);
   const triageStatus = job.match?.triageStatus || 'UNREVIEWED';
@@ -210,7 +211,13 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
 
         {/* Match score ring */}
         <div className="flex items-center shrink-0">
-          <ScoreRing score={score} size={46} calibrated={calibrated} />
+          {hasScore ? (
+            <ScoreRing score={score} size={46} calibrated={calibrated} />
+          ) : (
+            <span className="rounded-full border border-dashed border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-500">
+              {t('jobcard.unscored')}
+            </span>
+          )}
         </div>
       </div>
 
