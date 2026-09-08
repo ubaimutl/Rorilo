@@ -130,7 +130,7 @@ model FreeSourceSettings {
   adzunaAppId     String   @default("")
   adzunaAppKey    String   @default("")
   techmapKey      String   @default("")
-  enabledSources  String   @default("[\"arbeitsagentur\"]")
+  enabledSources  String   @default("[]")
   disabledBoards  String   @default("[]")
   customBoards    String   @default("[]")
   isConfigured    Boolean  @default(false)

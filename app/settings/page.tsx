@@ -89,7 +89,7 @@ export default function SettingsPage() {
   const [logoSaveResult, setLogoSaveResult] = useState<string | null>(null);
 
   // Free Sources State
-  const [freeEnabled, setFreeEnabled] = useState<string[]>(['arbeitsagentur']);
+  const [freeEnabled, setFreeEnabled] = useState<string[]>([]);
   const [adzunaAppId, setAdzunaAppId] = useState('');
   const [adzunaAppKey, setAdzunaAppKey] = useState('');
   const [techmapKey, setTechmapKey] = useState('');

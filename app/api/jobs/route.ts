@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { withStoredLogo } from '@/lib/logo';
 import { rememberDeletedJobs } from '@/lib/jobs/deleted-fingerprints';
 import { attachSourceSummary } from '@/lib/jobs/source-history';
+import { hasMatchProfile } from '@/lib/setup/readiness';
 
 export async function GET(req: Request) {
   try {
@@ -15,6 +16,12 @@ export async function GET(req: Request) {
     const status = searchParams.get('status') || '';
     const sort = searchParams.get('sort') || 'best'; // best, newest, salary
     const discoverStatuses = new Set(['NEW', 'SAVED']);
+
+    const [profile, preferences] = await Promise.all([
+      prisma.userProfile.findFirst({ where: { id: 'default' } }),
+      prisma.jobPreference.findFirst({ where: { id: 'default' } }),
+    ]);
+    const canShowMatches = hasMatchProfile(profile, preferences);
 
     // Fetch jobs with relations
     let jobs = await prisma.job.findMany({
@@ -60,9 +67,9 @@ export async function GET(req: Request) {
     }
 
     // Sorting
-    if (sort === 'best') {
+    if (sort === 'best' && canShowMatches) {
       jobs.sort((a, b) => (b.match?.matchScore ?? 0) - (a.match?.matchScore ?? 0));
-    } else if (sort === 'newest') {
+    } else if (sort === 'newest' || !canShowMatches) {
       jobs.sort((a, b) => {
         const timeA = a.datePosted ? new Date(a.datePosted).getTime() : new Date(a.discoveredAt).getTime();
         const timeB = b.datePosted ? new Date(b.datePosted).getTime() : new Date(b.discoveredAt).getTime();
@@ -83,12 +90,17 @@ export async function GET(req: Request) {
     const jobsWithViews = jobs.map((job) =>
       attachSourceSummary(withStoredLogo({
         ...job,
+        match: canShowMatches ? job.match : null,
         viewCount: viewCountById.get(job.id)?.viewCount || 0,
         lastViewedAt: viewCountById.get(job.id)?.lastViewedAt || null,
       }))
     );
 
-    return NextResponse.json({ jobs: jobsWithViews, total: jobsWithViews.length });
+    return NextResponse.json({
+      jobs: jobsWithViews,
+      total: jobsWithViews.length,
+      profileReady: canShowMatches,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message || 'Failed to fetch jobs' },

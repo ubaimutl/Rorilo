@@ -72,7 +72,7 @@ export async function GET() {
     const logoToken = await getLogoToken();
     const logoType = logoKeyType(logoToken);
     const freeRow = await getFreeSourceRow();
-    const enabledSources = await getEnabledFreeSources().catch(() => ['arbeitsagentur']);
+    const enabledSources = await getEnabledFreeSources().catch(() => []);
     const customBoards = await getCustomAtsBoards().catch(() => []);
     const savedActorIds = parseStringArray(apify?.actorIds);
     const defaultActorId = apify?.actorId || process.env.APIFY_ACTOR_ID || 'curious_coder/linkedin-jobs-scraper';
@@ -396,7 +396,7 @@ export async function POST(req: Request) {
           adzunaAppId: parsed.adzunaAppId || '',
           adzunaAppKey: parsed.adzunaAppKey || '',
           techmapKey: parsed.techmapKey || '',
-          enabledSources: JSON.stringify(parsed.enabledSources || ['arbeitsagentur']),
+          enabledSources: JSON.stringify(parsed.enabledSources || []),
           disabledBoards: JSON.stringify(parsed.disabledBoards || []),
           customBoards: JSON.stringify(parsed.customBoards || []),
           isConfigured: hasAnyKey,

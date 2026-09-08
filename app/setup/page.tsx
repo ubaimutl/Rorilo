@@ -76,7 +76,7 @@ function stepComplete(step: StepId, state: WizardState): boolean {
   if (step === 'cv') return Boolean(state.activeCvName || state.cvText.trim() || state.cvFileName);
   if (step === 'profile') return Boolean(state.firstName.trim() && state.email.trim());
   if (step === 'writing') return Boolean(state.desiredTitles.trim() || state.currentTitle.trim());
-  if (step === 'sources') return state.sourcesSaved && (state.freeEnabled.length > 0 || state.apifyActorIds.length > 0);
+  if (step === 'sources') return state.sourcesSaved && (state.freeEnabled.length > 0 || (state.hasApifyToken && state.apifyActorIds.length > 0));
   return false;
 }
 
@@ -167,7 +167,7 @@ const DEFAULT_STATE: WizardState = {
   apifyToken: '',
   hasApifyToken: false,
   apifyActorIds: ['curious_coder/linkedin-jobs-scraper'],
-  freeEnabled: ['arbeitsagentur'],
+  freeEnabled: [],
   adzunaAppId: '',
   adzunaAppKey: '',
   techmapKey: '',
