@@ -36,8 +36,6 @@ export class OpenAICompatibleProvider implements AIProvider {
   private baseUrl: string;
   private apiKey: string;
   private model: string;
-  private defaultTemperature: number;
-  private defaultMaxTokens: number;
   private structuredOutput: boolean;
   private disableReasoning: boolean;
   private providerOptions: Record<string, unknown>;
@@ -47,8 +45,6 @@ export class OpenAICompatibleProvider implements AIProvider {
     this.baseUrl = config.baseUrl.replace(/\/+$/, '');
     this.apiKey = config.apiKey;
     this.model = config.model;
-    this.defaultTemperature = config.temperature ?? 0.3;
-    this.defaultMaxTokens = config.maxTokens ?? 2500;
     this.structuredOutput = config.structuredOutput ?? true;
     this.disableReasoning = config.disableReasoning ?? true;
     this.providerOptions = config.providerOptions ?? {};
@@ -56,13 +52,16 @@ export class OpenAICompatibleProvider implements AIProvider {
 
   async chat(messages: ChatMessage[], options?: AICompletionOptions): Promise<string> {
     const url = `${this.baseUrl}/chat/completions`;
-    const requestedMaxTokens = options?.maxTokens ?? this.defaultMaxTokens;
     const body: Record<string, unknown> = {
       model: this.model,
       messages: messages,
-      temperature: options?.temperature ?? this.defaultTemperature,
-      max_tokens: Math.max(16, requestedMaxTokens),
     };
+    if (options?.temperature !== undefined) {
+      body.temperature = options.temperature;
+    }
+    if (options?.maxTokens !== undefined) {
+      body.max_completion_tokens = Math.max(16, options.maxTokens);
+    }
     if (options?.responseFormatJson) {
       body.response_format = { type: 'json_object' };
     }
@@ -93,6 +92,24 @@ export class OpenAICompatibleProvider implements AIProvider {
         `${this.providerName} could not be reached: ${error instanceof Error ? error.message : 'Network error'}`,
         { retryable: true, providerName: this.providerName }
       );
+    }
+
+    // Some older OpenAI-compatible gateways still expose only max_tokens.
+    // Retry that one field only after the provider explicitly rejects the
+    // newer spelling; the default request remains minimal.
+    if (!response.ok && response.status === 400 && 'max_completion_tokens' in body) {
+      const errorText = await response.clone().text().catch(() => '');
+      if (/max_completion_tokens.*(unsupported|not support|unknown)|unsupported.*max_completion_tokens/i.test(errorText)) {
+        const compatibilityBody = { ...body };
+        compatibilityBody.max_tokens = compatibilityBody.max_completion_tokens;
+        delete compatibilityBody.max_completion_tokens;
+        response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(compatibilityBody),
+          signal: AbortSignal.timeout(60000),
+        });
+      }
     }
 
     if (!response.ok) {
@@ -402,8 +419,6 @@ export function buildProviderConfigs(settings?: {
   temperature?: number | null;
   maxTokens?: number | null;
 }): AIProviderConfig[] {
-  const temperature = settings?.temperature ?? 0.3;
-  const maxTokens = settings?.maxTokens ?? 2500;
   const configs: AIProviderConfig[] = [];
 
   const primary: AIProviderConfig = {
@@ -411,8 +426,6 @@ export function buildProviderConfigs(settings?: {
     baseUrl: settings?.baseUrl || process.env.AI_BASE_URL || 'https://api.openai.com/v1',
     apiKey: settings?.apiKey || process.env.AI_API_KEY || '',
     model: settings?.model || process.env.AI_MODEL || DEFAULT_AI_MODEL,
-    temperature,
-    maxTokens,
     structuredOutput: settings?.structuredOutput ?? true,
     disableReasoning: settings?.disableReasoning ?? true,
     providerOptions: parseProviderOptions(settings?.providerOptions),
@@ -428,8 +441,6 @@ export function buildProviderConfigs(settings?: {
       baseUrl: provider.baseUrl,
       apiKey: provider.apiKey,
       model: provider.model,
-      temperature,
-      maxTokens,
       structuredOutput: provider.structuredOutput,
       disableReasoning: provider.disableReasoning,
       providerOptions: provider.providerOptions,
