@@ -16,6 +16,18 @@ type SharedChild = Arc<Mutex<Option<Child>>>;
 
 struct Sidecar(SharedChild);
 
+#[cfg(target_os = "linux")]
+fn configure_linux_webview_env() {
+    for (key, value) in [
+        ("WEBKIT_DISABLE_COMPOSITING_MODE", "1"),
+        ("WEBKIT_DISABLE_DMABUF_RENDERER", "1"),
+    ] {
+        if std::env::var_os(key).is_none() {
+            std::env::set_var(key, value);
+        }
+    }
+}
+
 fn stop_sidecar(slot: &SharedChild) {
     if let Some(mut child) = slot.lock().unwrap().take() {
         let _ = child.kill();
@@ -250,6 +262,9 @@ fn init_database(db_path: &PathBuf, schema_path: &PathBuf) -> Result<(), String>
 }
 
 fn main() {
+    #[cfg(target_os = "linux")]
+    configure_linux_webview_env();
+
     let sidecar: SharedChild = Arc::new(Mutex::new(None));
 
     #[cfg(not(windows))]

@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +24,38 @@ async function copyIfExists(from, to) {
   }
 }
 
+function isLocalOnlyFile(name) {
+  return (
+    name === '.env' ||
+    name.startsWith('.env.') ||
+    name.endsWith('.db') ||
+    name.endsWith('.sqlite') ||
+    name.endsWith('.sqlite3') ||
+    name.endsWith('.db-journal') ||
+    name.endsWith('.sqlite-journal')
+  );
+}
+
+async function scrubLocalOnlyFiles(dir) {
+  if (!(await exists(dir))) {
+    return;
+  }
+
+  const entries = await readdir(dir, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry) => {
+      const target = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await scrubLocalOnlyFiles(target);
+        return;
+      }
+      if (entry.isFile() && isLocalOnlyFile(entry.name)) {
+        await rm(target, { force: true });
+      }
+    })
+  );
+}
+
 await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });
 
@@ -32,7 +64,7 @@ if (!(await exists(path.join(standaloneDir, 'server.js')))) {
 }
 
 await cp(standaloneDir, outDir, { recursive: true, force: true });
-await rm(path.join(outDir, '.env'), { force: true });
+await scrubLocalOnlyFiles(outDir);
 await mkdir(path.join(outDir, '.next'), { recursive: true });
 await copyIfExists(path.join(root, '.next', 'static'), path.join(outDir, '.next', 'static'));
 await copyIfExists(path.join(root, 'public'), path.join(outDir, 'public'));
