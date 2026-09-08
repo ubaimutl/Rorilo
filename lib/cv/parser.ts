@@ -391,7 +391,10 @@ export function parseStoredStructuredCv(value?: string | null): StructuredCV {
  */
 export async function extractTextFromPdf(pdfBuffer: Buffer | Uint8Array): Promise<string> {
   const { extractText } = await import('unpdf');
-  const uint8 = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer);
+  const uint8 = new Uint8Array(pdfBuffer.buffer.slice(
+    pdfBuffer.byteOffset,
+    pdfBuffer.byteOffset + pdfBuffer.byteLength
+  ));
   const result = await extractText(uint8);
   const pages = Array.isArray(result.text) ? result.text : [result.text || ''];
   const text = pages.join('\n\n').trim();

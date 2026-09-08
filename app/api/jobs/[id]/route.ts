@@ -4,6 +4,7 @@ import { withStoredLogo } from '@/lib/logo';
 import { rememberDeletedJobs } from '@/lib/jobs/deleted-fingerprints';
 import { attachSourceSummary } from '@/lib/jobs/source-history';
 import { validateManualDescription } from '@/lib/jobs/manual-description';
+import { hasMatchProfile } from '@/lib/setup/readiness';
 
 export async function GET(
   req: Request,
@@ -40,6 +41,12 @@ export async function GET(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    const [profile, preferences] = await Promise.all([
+      prisma.userProfile.findFirst({ where: { id: 'default' } }),
+      prisma.jobPreference.findFirst({ where: { id: 'default' } }),
+    ]);
+    const canShowMatch = hasMatchProfile(profile, preferences);
+
     const viewRows = await prisma.$queryRaw<Array<{ viewCount: number; lastViewedAt: string | null }>>`
       SELECT viewCount, lastViewedAt
       FROM Job
@@ -51,6 +58,7 @@ export async function GET(
     return NextResponse.json({
       job: attachSourceSummary(withStoredLogo({
         ...job,
+        match: canShowMatch ? job.match : null,
         viewCount: viewData?.viewCount || 0,
         lastViewedAt: viewData?.lastViewedAt || null,
       })),

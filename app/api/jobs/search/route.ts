@@ -5,6 +5,7 @@ import { areJobsDuplicates, computeJobHash } from '@/lib/jobs/deduplicate';
 import { rememberDeletedJobs, wasJobDeletedBefore } from '@/lib/jobs/deleted-fingerprints';
 import { matchesExcludedCompany } from '@/lib/jobs/exclusions';
 import { calculateDeterministicMatch } from '@/lib/matching/engine';
+import { hasMatchProfile } from '@/lib/setup/readiness';
 import type { JobSourceSearchResult, JobSearchParams, NormalizedJobInput } from '@/lib/job-sources/types';
 import { resolveSourceAdapter } from '@/lib/job-sources/sources';
 import { resolveFreeSource } from '@/lib/job-sources/free';
@@ -131,7 +132,8 @@ async function saveDiscoveredJob(
   fallbackSource: string,
   fallbackCountry: string,
   profile: Awaited<ReturnType<typeof prisma.userProfile.findFirst>>,
-  preferences: Awaited<ReturnType<typeof prisma.jobPreference.findFirst>>
+  preferences: Awaited<ReturnType<typeof prisma.jobPreference.findFirst>>,
+  shouldScore: boolean
 ): Promise<{ created: boolean; jobId: string | null; skippedDeleted: boolean; skippedExcluded?: boolean }> {
   const hash = computeJobHash(jobItem);
   const excludedBy = matchesExcludedCompany(jobItem.company, preferences?.excludedCompanies);
@@ -198,24 +200,26 @@ async function saveDiscoveredJob(
     },
   });
 
-  const match = calculateDeterministicMatch(createdJob, profile, preferences);
+  if (shouldScore) {
+    const match = calculateDeterministicMatch(createdJob, profile, preferences);
 
-  await prisma.jobMatch.create({
-    data: {
-      jobId: createdJob.id,
-      matchScore: match.matchScore,
-      skillsScore: match.breakdown.skillsScore,
-      roleScore: match.breakdown.roleScore,
-      experienceScore: match.breakdown.experienceScore,
-      locationScore: match.breakdown.locationScore,
-      languageScore: match.breakdown.languageScore,
-      salaryScore: match.breakdown.salaryScore,
-      preferencesScore: match.breakdown.preferencesScore,
-      strongMatches: JSON.stringify(match.strongMatches),
-      possibleIssues: JSON.stringify(match.possibleIssues),
-      missingSkills: JSON.stringify(match.missingSkills),
-    },
-  });
+    await prisma.jobMatch.create({
+      data: {
+        jobId: createdJob.id,
+        matchScore: match.matchScore,
+        skillsScore: match.breakdown.skillsScore,
+        roleScore: match.breakdown.roleScore,
+        experienceScore: match.breakdown.experienceScore,
+        locationScore: match.breakdown.locationScore,
+        languageScore: match.breakdown.languageScore,
+        salaryScore: match.breakdown.salaryScore,
+        preferencesScore: match.breakdown.preferencesScore,
+        strongMatches: JSON.stringify(match.strongMatches),
+        possibleIssues: JSON.stringify(match.possibleIssues),
+        missingSkills: JSON.stringify(match.missingSkills),
+      },
+    });
+  }
 
   return { created: true, jobId: createdJob.id, skippedDeleted: false };
 }
@@ -268,6 +272,7 @@ export async function POST(req: Request) {
       prisma.userProfile.findFirst({ where: { id: 'default' } }),
       prisma.jobPreference.findFirst({ where: { id: 'default' } }),
     ]);
+    const shouldScore = hasMatchProfile(profile, preferences);
 
     const searchParams: JobSearchParams = {
       title: normalizedTitle,
@@ -362,7 +367,7 @@ export async function POST(req: Request) {
 
         for (const jobItem of searchResult.jobs) {
           inspectedCount++;
-          const saved = await saveDiscoveredJob(jobItem, sourceLabel, searchParams.country || 'DE', profile, preferences);
+          const saved = await saveDiscoveredJob(jobItem, sourceLabel, searchParams.country || 'DE', profile, preferences, shouldScore);
           if (saved.skippedExcluded) {
             skippedExcludedCount++;
             continue;
@@ -457,7 +462,8 @@ export async function POST(req: Request) {
       skippedExcluded,
       results,
       failedSources,
-      jobIds: Array.from(new Set(jobIdsForTriage)),
+      jobIds: shouldScore ? Array.from(new Set(jobIdsForTriage)) : [],
+      needsProfileSetup: !shouldScore,
     });
   } catch (error) {
     console.error('Job search run failed:', error);

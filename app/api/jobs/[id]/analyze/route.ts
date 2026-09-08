@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { extractJobAnalysisWithAI } from '@/lib/jobs/extractor';
 import { calculateDeterministicMatch, synthesizeMatchWithAI } from '@/lib/matching/engine';
+import { hasMatchProfile } from '@/lib/setup/readiness';
 
 export async function POST(
   _req: Request,
@@ -19,6 +20,13 @@ export async function POST(
       prisma.userProfile.findFirst({ where: { id: 'default' } }),
       prisma.jobPreference.findFirst({ where: { id: 'default' } }),
     ]);
+
+    if (!hasMatchProfile(profile, preferences)) {
+      return NextResponse.json(
+        { error: 'Set up your profile before analyzing job fit. Add a CV, skills, or target roles first.' },
+        { status: 400 }
+      );
+    }
 
     // Perform AI analysis
     const analysis = await extractJobAnalysisWithAI(job);

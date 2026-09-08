@@ -40,14 +40,14 @@ export async function POST(req: Request) {
 
         filename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
 
         if (filename.endsWith('.txt') || filename.endsWith('.md')) {
+          const buffer = Buffer.from(bytes);
           extractedText = buffer.toString('utf-8').trim();
         } else {
           // Extract text from PDF
           try {
-            extractedText = await extractTextFromPdf(buffer);
+            extractedText = await extractTextFromPdf(new Uint8Array(bytes));
           } catch (e) {
             return NextResponse.json(
               { error: `Failed to extract text from PDF: ${(e as Error).message}` },

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateApplicationMaterials } from '@/lib/application/generator';
+import { getAISettingsRow } from '@/lib/ai/settings-store';
+import { getAiProviderIssue, getDraftReadinessIssues } from '@/lib/setup/readiness';
 
 export async function POST(
   _req: Request,
@@ -17,11 +19,25 @@ export async function POST(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    const [profile, preferences, activeCv] = await Promise.all([
+    const [profile, preferences, activeCv, aiSettings] = await Promise.all([
       prisma.userProfile.findFirst({ where: { id: 'default' } }),
       prisma.jobPreference.findFirst({ where: { id: 'default' } }),
       prisma.cV.findFirst({ where: { isActive: true }, orderBy: { uploadDate: 'desc' } }),
+      getAISettingsRow(),
     ]);
+
+    const aiIssue = getAiProviderIssue(aiSettings);
+    if (aiIssue) {
+      return NextResponse.json({ error: aiIssue }, { status: 400 });
+    }
+
+    const setupIssues = getDraftReadinessIssues(profile, preferences, activeCv);
+    if (setupIssues.length > 0) {
+      return NextResponse.json(
+        { error: `Set up your profile before generating application materials. ${setupIssues.join(' ')}` },
+        { status: 400 }
+      );
+    }
 
     // Generate tailored materials
     const materials = await generateApplicationMaterials(

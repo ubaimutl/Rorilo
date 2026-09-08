@@ -4,6 +4,7 @@ import { runApifyActor } from '@/lib/job-sources/apify';
 import { normalizeJobPayload, resolveSourceUrl } from '@/lib/jobs/normalize';
 import { calculateDeterministicMatch } from '@/lib/matching/engine';
 import { withStoredLogo } from '@/lib/logo';
+import { hasMatchProfile } from '@/lib/setup/readiness';
 
 const STEPSTONE_DETAILS_ACTOR = 'trakk/stepstone-jobs-scraper';
 
@@ -116,40 +117,42 @@ export async function POST(
       prisma.userProfile.findFirst({ where: { id: 'default' } }),
       prisma.jobPreference.findFirst({ where: { id: 'default' } }),
     ]);
-    const match = calculateDeterministicMatch(updated, profile, preferences);
-    await prisma.jobMatch.upsert({
-      where: { jobId: id },
-      update: {
-        matchScore: match.matchScore,
-        skillsScore: match.breakdown.skillsScore,
-        roleScore: match.breakdown.roleScore,
-        experienceScore: match.breakdown.experienceScore,
-        locationScore: match.breakdown.locationScore,
-        languageScore: match.breakdown.languageScore,
-        salaryScore: match.breakdown.salaryScore,
-        preferencesScore: match.breakdown.preferencesScore,
-        strongMatches: JSON.stringify(match.strongMatches),
-        possibleIssues: JSON.stringify(match.possibleIssues),
-        missingSkills: JSON.stringify(match.missingSkills),
-        // Description changed — previous AI calibration is stale.
-        aiMatchScore: null,
-        aiScoredAt: null,
-      },
-      create: {
-        jobId: id,
-        matchScore: match.matchScore,
-        skillsScore: match.breakdown.skillsScore,
-        roleScore: match.breakdown.roleScore,
-        experienceScore: match.breakdown.experienceScore,
-        locationScore: match.breakdown.locationScore,
-        languageScore: match.breakdown.languageScore,
-        salaryScore: match.breakdown.salaryScore,
-        preferencesScore: match.breakdown.preferencesScore,
-        strongMatches: JSON.stringify(match.strongMatches),
-        possibleIssues: JSON.stringify(match.possibleIssues),
-        missingSkills: JSON.stringify(match.missingSkills),
-      },
-    });
+    if (hasMatchProfile(profile, preferences)) {
+      const match = calculateDeterministicMatch(updated, profile, preferences);
+      await prisma.jobMatch.upsert({
+        where: { jobId: id },
+        update: {
+          matchScore: match.matchScore,
+          skillsScore: match.breakdown.skillsScore,
+          roleScore: match.breakdown.roleScore,
+          experienceScore: match.breakdown.experienceScore,
+          locationScore: match.breakdown.locationScore,
+          languageScore: match.breakdown.languageScore,
+          salaryScore: match.breakdown.salaryScore,
+          preferencesScore: match.breakdown.preferencesScore,
+          strongMatches: JSON.stringify(match.strongMatches),
+          possibleIssues: JSON.stringify(match.possibleIssues),
+          missingSkills: JSON.stringify(match.missingSkills),
+          // Description changed, so previous AI calibration is stale.
+          aiMatchScore: null,
+          aiScoredAt: null,
+        },
+        create: {
+          jobId: id,
+          matchScore: match.matchScore,
+          skillsScore: match.breakdown.skillsScore,
+          roleScore: match.breakdown.roleScore,
+          experienceScore: match.breakdown.experienceScore,
+          locationScore: match.breakdown.locationScore,
+          languageScore: match.breakdown.languageScore,
+          salaryScore: match.breakdown.salaryScore,
+          preferencesScore: match.breakdown.preferencesScore,
+          strongMatches: JSON.stringify(match.strongMatches),
+          possibleIssues: JSON.stringify(match.possibleIssues),
+          missingSkills: JSON.stringify(match.missingSkills),
+        },
+      });
+    }
 
     return NextResponse.json({ success: true, enriched: true });
   } catch (error) {
