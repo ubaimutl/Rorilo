@@ -499,41 +499,36 @@ export default function JobDetailPage() {
               )}
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('jobdetail.about')}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {descriptionNotice && (
-                  <Alert>
-                    <TriangleAlert />
-                    <AlertDescription>{descriptionNotice}</AlertDescription>
-                  </Alert>
-                )}
-                {canEnrich && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEnrich}
-                      disabled={enriching}
-                      className="text-xs h-8 gap-1.5"
-                      title={t('drafts.fetchTitle')}
-                    >
-                      {enriching ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
-                      <span>{enriching ? t('drafts.fetching') : t('drafts.fetch')}</span>
-                    </Button>
-                    {enrichError && (
-                      <span className="text-xs text-red-600 font-medium">{enrichError}</span>
-                    )}
-                  </div>
-                )}
-                {hasDescription && <FormattedDescription text={job.description} />}
-                {descriptionLength < 200 && (
-                  <JobDescriptionInput jobId={job.id} onSaved={() => fetchJob()} />
-                )}
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-4 mt-8">
+              {descriptionNotice && (
+                <Alert>
+                  <TriangleAlert />
+                  <AlertDescription>{descriptionNotice}</AlertDescription>
+                </Alert>
+              )}
+              {canEnrich && (
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEnrich}
+                    disabled={enriching}
+                    className="text-xs h-8 gap-1.5"
+                    title={t('drafts.fetchTitle')}
+                  >
+                    {enriching ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+                    <span>{enriching ? t('drafts.fetching') : t('drafts.fetch')}</span>
+                  </Button>
+                  {enrichError && (
+                    <span className="text-xs text-red-600 font-medium">{enrichError}</span>
+                  )}
+                </div>
+              )}
+              {hasDescription && <FormattedDescription text={job.description} />}
+              {descriptionLength < 200 && (
+                <JobDescriptionInput jobId={job.id} onSaved={() => fetchJob()} />
+              )}
+            </div>
           </div>
 
           {/* Right Action & Fit Summary Column */}

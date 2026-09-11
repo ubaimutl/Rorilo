@@ -74,13 +74,19 @@ export function FormattedDescription({
   if (blocks.length === 0) return null;
 
   return (
-    <div className={cn('flex flex-col gap-3 text-[15px] leading-8 text-neutral-700 font-sans', className)}>
+    <div 
+      className={cn('text-base text-neutral-900', className)}
+      style={{
+        fontFamily: 'ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"',
+        lineHeight: '1.75'
+      }}
+    >
       {blocks.map((block, index) => {
         if (block.type === 'heading') {
           return (
             <h3
               key={index}
-              className="pt-3 first:pt-0 text-sm font-semibold text-neutral-900 tracking-tight"
+              className="mt-8 mb-4 first:mt-0 text-lg font-bold text-neutral-900"
             >
               {block.text}
             </h3>
@@ -88,14 +94,14 @@ export function FormattedDescription({
         }
         if (block.type === 'list') {
           return (
-            <ul key={index} className="flex flex-col gap-1.5 pl-5 list-disc marker:text-neutral-400">
+            <ul key={index} className="mb-4 last:mb-0 flex flex-col gap-2 pl-5 list-disc marker:text-neutral-400">
               {block.items.map((item, itemIndex) => (
                 <li key={itemIndex}>{renderInlineMarkdown(item)}</li>
               ))}
             </ul>
           );
         }
-        return <p key={index}>{renderInlineMarkdown(block.text)}</p>;
+        return <p key={index} className="mb-4 last:mb-0">{renderInlineMarkdown(block.text)}</p>;
       })}
     </div>
   );
