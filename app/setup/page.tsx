@@ -92,6 +92,7 @@ type WizardState = {
   cvFile: File | null;
   cvFileName: string;
   activeCvName: string;
+  cvParsedByAi: boolean;
   firstName: string;
   lastName: string;
   email: string;
@@ -142,6 +143,7 @@ const DEFAULT_STATE: WizardState = {
   cvFile: null,
   cvFileName: '',
   activeCvName: '',
+  cvParsedByAi: true,
   firstName: '',
   lastName: '',
   email: '',
@@ -313,6 +315,7 @@ export default function SetupPage() {
       yearsExperience: data.structured?.yearsExperience || state.yearsExperience,
       skills: data.structured?.skills?.join(', ') || state.skills,
       languages: data.structured?.languages?.join(', ') || state.languages,
+      cvParsedByAi: data.parsedByAi !== false,
     });
   };
 
@@ -632,6 +635,17 @@ export default function SetupPage() {
                 <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
                   <Check className="size-4" />
                   {t('setup.cvActive', { name: state.activeCvName })}
+                </div>
+              )}
+              {state.activeCvName && !state.cvParsedByAi && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-800">
+                  <span className="mt-px shrink-0 text-amber-500">⚠</span>
+                  <span>
+                    {t('profile.cvAiFallbackNudge')}{' '}
+                    <Link href="/settings" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+                      Settings →
+                    </Link>
+                  </span>
                 </div>
               )}
               <div className="flex flex-col gap-4 sm:flex-row">

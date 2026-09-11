@@ -1,47 +1,86 @@
 import { z } from 'zod';
 import { getAIProvider } from '../ai/openai-compatible';
 
+/**
+ * Null-safe schema helpers.
+ * Zod's .default() only fills in `undefined`, never `null`.
+ * AI models often return `null` for missing fields, which causes schema
+ * validation failures. These preprocessors coerce null → the fallback value
+ * before Zod sees the input, preventing false fallbacks.
+ */
+// null/undefined → '' (string)
+const ns = (fallback = '') =>
+  z.preprocess((v) => (v == null ? fallback : String(v)), z.string());
+
+// null/undefined → [] (string array), filter out non-strings
+const nsa = () =>
+  z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((x) => x != null).map(String) : []),
+    z.array(z.string())
+  );
+
+// null/undefined → 0 (number)
+const nn = (fallback = 0) =>
+  z.preprocess((v) => {
+    if (v == null) return fallback;
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  }, z.number());
+
+// null/undefined → undefined (optional string)
+const nos = () =>
+  z.preprocess((v) => (v == null ? undefined : String(v)), z.string().optional());
+
 export const StructuredCVSchema = z.object({
-  firstName: z.string().default(''),
-  lastName: z.string().default(''),
-  email: z.string().default(''),
-  phone: z.string().default(''),
-  city: z.string().default(''),
-  country: z.string().default(''),
-  linkedIn: z.string().default(''),
-  gitHub: z.string().default(''),
-  portfolio: z.string().default(''),
-  additionalUrls: z.array(z.string()).default([]),
-  currentTitle: z.string().default(''),
-  yearsExperience: z.number().default(0),
-  skills: z.array(z.string()).default([]),
-  technologies: z.array(z.string()).default([]),
-  languages: z.array(z.string()).default([]),
-  education: z.array(
-    z.object({
-      institution: z.string().default(''),
-      degree: z.string().default(''),
-      field: z.string().default(''),
-      year: z.string().default(''),
-    })
-  ).default([]),
-  workExperience: z.array(
-    z.object({
-      company: z.string().default(''),
-      role: z.string().default(''),
-      startDate: z.string().default(''),
-      endDate: z.string().default(''),
-      highlights: z.array(z.string()).default([]),
-    })
-  ).default([]),
-  projects: z.array(
-    z.object({
-      name: z.string().default(''),
-      description: z.string().default(''),
-      technologies: z.array(z.string()).default([]),
-      link: z.string().optional(),
-    })
-  ).default([]),
+  firstName: ns(),
+  lastName: ns(),
+  email: ns(),
+  phone: ns(),
+  city: ns(),
+  country: ns(),
+  linkedIn: ns(),
+  gitHub: ns(),
+  portfolio: ns(),
+  additionalUrls: nsa(),
+  currentTitle: ns(),
+  yearsExperience: nn(),
+  skills: nsa(),
+  technologies: nsa(),
+  languages: nsa(),
+  education: z.preprocess(
+    (v) => (Array.isArray(v) ? v : []),
+    z.array(
+      z.object({
+        institution: ns(),
+        degree: ns(),
+        field: ns(),
+        year: ns(),
+      })
+    )
+  ),
+  workExperience: z.preprocess(
+    (v) => (Array.isArray(v) ? v : []),
+    z.array(
+      z.object({
+        company: ns(),
+        role: ns(),
+        startDate: ns(),
+        endDate: ns(),
+        highlights: nsa(),
+      })
+    )
+  ),
+  projects: z.preprocess(
+    (v) => (Array.isArray(v) ? v : []),
+    z.array(
+      z.object({
+        name: ns(),
+        description: ns(),
+        technologies: nsa(),
+        link: nos(),
+      })
+    )
+  ),
 });
 
 export type StructuredCV = z.infer<typeof StructuredCVSchema>;
@@ -406,10 +445,15 @@ export async function extractTextFromPdf(pdfBuffer: Buffer | Uint8Array): Promis
 
 /**
  * Parses raw CV text into a structured profile using AI with Zod validation.
+ * Falls back to local heuristic parsing when no AI provider is configured.
+ * Returns both the structured data and a flag indicating whether AI was used.
  */
-export async function parseCvTextToStructured(cvText: string): Promise<StructuredCV> {
+export async function parseCvTextToStructured(
+  cvText: string
+): Promise<{ structured: StructuredCV; parsedByAi: boolean; parseError?: string }> {
   const prompt = `Extract all resume/CV details from the text below into the requested JSON schema.
 Only extract information that is explicitly stated. Do not fabricate any employers, dates, skills, or degrees.
+For any field where information is not present, use an empty string "" for text fields and an empty array [] for list fields. Never use null.
 
 CV TEXT:
 ${cvText.slice(0, 6000)}
@@ -417,13 +461,25 @@ ${cvText.slice(0, 6000)}
 
   try {
     const ai = await getAIProvider();
-    const structured = await ai.generateStructured(prompt, StructuredCVSchema, {
+    const aiResult = await ai.generateStructured(prompt, StructuredCVSchema, {
       temperature: 0.1,
       maxTokens: 2500,
+      systemPrompt:
+        'You extract structured CV/resume data. Return ONLY valid JSON matching the schema. Use empty string "" for missing text fields and empty array [] for missing list fields — never use null.',
     });
-    return mergeStructuredCv(structured, extractCvLocally(cvText));
+    return {
+      structured: mergeStructuredCv(aiResult, extractCvLocally(cvText)),
+      parsedByAi: true,
+    };
   } catch (err) {
-    console.warn('AI CV structuring failed or not configured, using fallback parsing:', err);
-    return extractCvLocally(cvText);
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn('AI CV structuring failed, using fallback parsing:', reason);
+    return {
+      structured: extractCvLocally(cvText),
+      parsedByAi: false,
+      parseError: reason,
+    };
   }
 }
+
+

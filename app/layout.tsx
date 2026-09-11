@@ -56,7 +56,7 @@ export default function RootLayout({
         />
         <I18nProvider>
           <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0 min-h-screen md:h-screen md:overflow-y-auto">
+          <div className="flex-1 flex flex-col min-w-0 min-h-screen">
             <FirstRunSetupDialog />
             {children}
           </div>

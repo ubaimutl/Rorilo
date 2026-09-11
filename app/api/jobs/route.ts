@@ -33,6 +33,18 @@ export async function GET(req: Request) {
       orderBy: { discoveredAt: 'desc' },
     });
 
+    const allDiscoverJobs = jobs.filter((j) => !j.application || discoverStatuses.has(j.application.status));
+    const scoredJobs = allDiscoverJobs.filter((j) => j.match);
+    const globalStats = {
+      visible: allDiscoverJobs.length,
+      saved: allDiscoverJobs.filter((j) => j.application?.status === 'SAVED').length,
+      worthApplying: allDiscoverJobs.filter((j) => j.match?.triageStatus === 'WORTH_APPLYING').length,
+      avgScore: scoredJobs.length > 0
+        ? Math.round(scoredJobs.reduce((sum, j) => sum + (j.match?.matchScore ?? 0), 0) / scoredJobs.length)
+        : null,
+      skipped: allDiscoverJobs.filter((j) => j.match?.triageStatus === 'SKIP').length,
+    };
+
     // In-memory / SQL filtering
     if (search) {
       jobs = jobs.filter(
@@ -66,6 +78,7 @@ export async function GET(req: Request) {
       jobs = jobs.filter((j) => !j.application || discoverStatuses.has(j.application.status));
     }
 
+
     // Sorting
     if (sort === 'best' && canShowMatches) {
       jobs.sort((a, b) => (b.match?.matchScore ?? 0) - (a.match?.matchScore ?? 0));
@@ -87,18 +100,48 @@ export async function GET(req: Request) {
         `
       : [];
     const viewCountById = new Map(viewCounts.map((item) => [item.id, item]));
-    const jobsWithViews = jobs.map((job) =>
-      attachSourceSummary(withStoredLogo({
+    const jobsWithViews = jobs.map((job) => {
+      // When the profile isn't ready for scoring, hide score-related fields but
+      // preserve triageStatus/triageReason so badges still render on the discover
+      // page for jobs that have already been triaged.
+      let matchPayload: typeof job.match | null = null;
+      if (canShowMatches) {
+        matchPayload = job.match;
+      } else if (job.match && job.match.triageStatus && job.match.triageStatus !== 'UNREVIEWED') {
+        matchPayload = {
+          ...job.match,
+          matchScore: 0,
+          skillsScore: 0,
+          roleScore: 0,
+          experienceScore: 0,
+          locationScore: 0,
+          languageScore: 0,
+          salaryScore: 0,
+          preferencesScore: 0,
+          strongMatches: '[]',
+          possibleIssues: '[]',
+          missingSkills: '[]',
+          aiInterpretation: null,
+          aiMatchScore: null,
+          aiScoredAt: null,
+          lastCalculatedAt: job.match.lastCalculatedAt,
+        };
+      }
+      return attachSourceSummary(withStoredLogo({
         ...job,
-        match: canShowMatches ? job.match : null,
+        match: matchPayload,
         viewCount: viewCountById.get(job.id)?.viewCount || 0,
         lastViewedAt: viewCountById.get(job.id)?.lastViewedAt || null,
-      }))
-    );
+      }));
+    });
+
+    const totalJobsInDb = await prisma.job.count();
 
     return NextResponse.json({
       jobs: jobsWithViews,
       total: jobsWithViews.length,
+      totalJobsInDb,
+      globalStats,
       profileReady: canShowMatches,
     });
   } catch (error) {
@@ -112,19 +155,34 @@ export async function GET(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
-    const ids = Array.isArray(body.ids)
-      ? body.ids.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-      : [];
+    
+    let jobsToDelete: any[] = [];
+    
+    if (body.deleteSkipped === true) {
+      jobsToDelete = await prisma.job.findMany({
+        where: {
+          match: { triageStatus: 'SKIP' },
+          OR: [
+            { application: null },
+            { application: { status: { in: ['NEW', 'SAVED'] } } }
+          ]
+        },
+      });
+    } else {
+      const ids = Array.isArray(body.ids)
+        ? body.ids.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+        : [];
 
-    if (ids.length === 0) {
-      return NextResponse.json({ error: 'No job ids provided' }, { status: 400 });
+      if (ids.length === 0) {
+        return NextResponse.json({ error: 'No job ids provided' }, { status: 400 });
+      }
+
+      jobsToDelete = await prisma.job.findMany({
+        where: {
+          id: { in: ids },
+        },
+      });
     }
-
-    const jobsToDelete = await prisma.job.findMany({
-      where: {
-        id: { in: ids },
-      },
-    });
 
     if (jobsToDelete.length > 0) {
       await rememberDeletedJobs(jobsToDelete);

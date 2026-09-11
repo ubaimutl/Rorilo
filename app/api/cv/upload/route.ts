@@ -67,8 +67,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // AI structured extraction
-    const structured = await parseCvTextToStructured(extractedText);
+    // AI-first structured extraction, falls back silently to local heuristic parser
+    const { structured, parsedByAi, parseError } = await parseCvTextToStructured(extractedText);
 
     // Mark previous CVs inactive
     await prisma.cV.updateMany({
@@ -142,6 +142,8 @@ export async function POST(req: Request) {
       success: true,
       cv,
       structured,
+      parsedByAi,
+      parseError: parseError ?? null,
       summary: {
         name: [structured.firstName, structured.lastName].filter(Boolean).join(' '),
         title: structured.currentTitle,

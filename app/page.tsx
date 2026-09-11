@@ -33,12 +33,23 @@ import {
 import { useI18n } from "@/components/I18nProvider";
 
 const DISCOVER_STATE_KEY = "rorilo_discover_state";
-const DISCOVER_SCROLL_KEY = "rorilo_discover_scroll";
+// Module-level cache preserves jobs during SPA navigation (like clicking a job and hitting back).
+// This allows the page to render synchronously on back-navigation, making native browser
+// scroll restoration work perfectly without layout shifts.
+let cachedJobs: any[] | null = null;
+let cachedProfileReady = false;
+let cachedTotalJobsInDb: number | null = null;
+let cachedGlobalStats: any = null;
 
 export default function JobsPage() {
 	const { t } = useI18n();
-	const [jobs, setJobs] = useState<any[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [jobs, setJobs] = useState<any[]>(cachedJobs || []);
+	const [totalJobsInDb, setTotalJobsInDb] = useState<number | null>(cachedTotalJobsInDb);
+	const [globalStats, setGlobalStats] = useState<any>(cachedGlobalStats);
+	const [loading, setLoading] = useState(!cachedJobs);
+	// Separate display state (updates instantly) from debounced API state (triggers fetch)
+	const [searchInput, setSearchInput] = useState("");
+	const [locationInput, setLocationInput] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [locationQuery, setLocationQuery] = useState("");
 	const [remoteFilter, setRemoteFilter] = useState("all");
@@ -51,10 +62,10 @@ export default function JobsPage() {
 	const [triaging, setTriaging] = useState(false);
 	const [triageError, setTriageError] = useState<string | null>(null);
 	const [deleteError, setDeleteError] = useState<string | null>(null);
-	const [profileReady, setProfileReady] = useState(false);
+	const [profileReady, setProfileReady] = useState(cachedProfileReady);
 	const [hasRestoredState, setHasRestoredState] = useState(false);
 	const [searchInsightsRefresh, setSearchInsightsRefresh] = useState(0);
-	const restoredScroll = useRef(false);
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	const skippedJobs = jobs.filter((job) => job.match?.triageStatus === "SKIP");
 	const savedCount = jobs.filter(
@@ -75,20 +86,24 @@ export default function JobsPage() {
 	const stats = [
 		{
 			icon: Briefcase,
-			value: String(jobs.length),
+			value: globalStats ? String(globalStats.visible) : "0",
 			label: t("discover.stats.visible"),
 		},
 		{
 			icon: BookmarkCheck,
-			value: String(savedCount),
+			value: globalStats ? String(globalStats.saved) : "0",
 			label: t("discover.stats.saved"),
 		},
 		{
 			icon: Sparkles,
-			value: String(worthApplyingCount),
+			value: globalStats ? String(globalStats.worthApplying) : "0",
 			label: t("discover.stats.worth"),
 		},
-		{ icon: Gauge, value: avgScore, label: t("discover.stats.avg") },
+		{ 
+			icon: Gauge, 
+			value: globalStats && globalStats.avgScore !== null ? `${globalStats.avgScore}%` : "--", 
+			label: t("discover.stats.avg") 
+		},
 	];
 
 	const fetchJobs = useCallback(
@@ -98,6 +113,13 @@ export default function JobsPage() {
 			remoteFilter?: string;
 			activeTab?: "best" | "newest" | "saved";
 		}) => {
+			// Abort any previous request to prevent race conditions during debounced typing
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
+			const abortController = new AbortController();
+			abortControllerRef.current = abortController;
+
 			setLoading(true);
 			try {
 				const params = new URLSearchParams();
@@ -111,33 +133,54 @@ export default function JobsPage() {
 				if (nextTab === "saved") params.set("status", "SAVED");
 				params.set("sort", nextTab === "newest" ? "newest" : "best");
 
-				const res = await fetch(`/api/jobs?${params.toString()}`);
+				const res = await fetch(`/api/jobs?${params.toString()}`, {
+					signal: abortController.signal,
+				});
 				const data = await res.json();
-				setJobs(data.jobs || []);
+				
+				const newJobs = data.jobs || [];
+				setJobs(newJobs);
+				setTotalJobsInDb(data.totalJobsInDb ?? 0);
+				setGlobalStats(data.globalStats ?? null);
 				setProfileReady(Boolean(data.profileReady));
+				
+				// Update memory cache for synchronous render on back-navigation
+				cachedJobs = newJobs;
+				cachedTotalJobsInDb = data.totalJobsInDb ?? 0;
+				cachedGlobalStats = data.globalStats ?? null;
+				cachedProfileReady = Boolean(data.profileReady);
+
 				setSelectedJobIds((current) =>
 					current.filter((jobId) =>
-						(data.jobs || []).some((job: any) => job.id === jobId),
+						newJobs.some((job: any) => job.id === jobId),
 					),
 				);
-			} catch (err) {
+			} catch (err: any) {
+				if (err.name === "AbortError") return; // Ignore aborted requests silently
 				console.error(err);
 			} finally {
-				setLoading(false);
+				if (!abortController.signal.aborted) {
+					setLoading(false);
+				}
 			}
 		},
 		[activeTab, locationQuery, remoteFilter, searchQuery],
 	);
 
+	// Restore persisted filter/search state from localStorage on first mount
 	useEffect(() => {
 		try {
 			const saved = localStorage.getItem(DISCOVER_STATE_KEY);
 			if (saved) {
 				const parsed = JSON.parse(saved);
-				if (typeof parsed.searchQuery === "string")
+				if (typeof parsed.searchQuery === "string") {
 					setSearchQuery(parsed.searchQuery);
-				if (typeof parsed.locationQuery === "string")
+					setSearchInput(parsed.searchQuery);
+				}
+				if (typeof parsed.locationQuery === "string") {
 					setLocationQuery(parsed.locationQuery);
+					setLocationInput(parsed.locationQuery);
+				}
 				if (typeof parsed.remoteFilter === "string")
 					setRemoteFilter(parsed.remoteFilter);
 				if (["best", "newest", "saved"].includes(parsed.activeTab)) {
@@ -148,6 +191,7 @@ export default function JobsPage() {
 		setHasRestoredState(true);
 	}, []);
 
+	// Persist filter state whenever it changes
 	useEffect(() => {
 		if (!hasRestoredState) return;
 		try {
@@ -158,36 +202,31 @@ export default function JobsPage() {
 		} catch {}
 	}, [searchQuery, locationQuery, remoteFilter, activeTab, hasRestoredState]);
 
+	// Debounce: sync input display values → debounced query values after 400ms idle
+	useEffect(() => {
+		if (!hasRestoredState) return;
+		const timer = setTimeout(() => {
+			setSearchQuery(searchInput);
+		}, 400);
+		return () => clearTimeout(timer);
+	}, [searchInput, hasRestoredState]);
+
+	useEffect(() => {
+		if (!hasRestoredState) return;
+		const timer = setTimeout(() => {
+			setLocationQuery(locationInput);
+		}, 400);
+		return () => clearTimeout(timer);
+	}, [locationInput, hasRestoredState]);	// Fetch jobs whenever the debounced query values or filters change
+	// Note: First render from cache is synchronous so we don't need to fetch
+	// if we restored from cache AND query parameters haven't changed yet.
 	useEffect(() => {
 		if (!hasRestoredState) return;
 		const handler = setTimeout(() => {
 			fetchJobs();
-		}, 150);
+		}, 50);
 		return () => clearTimeout(handler);
 	}, [fetchJobs, hasRestoredState]);
-
-	useEffect(() => {
-		const handleScroll = () => {
-			try {
-				localStorage.setItem(DISCOVER_SCROLL_KEY, String(window.scrollY));
-			} catch {}
-		};
-		window.addEventListener("scroll", handleScroll, { passive: true });
-		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
-
-	useEffect(() => {
-		if (loading || restoredScroll.current) return;
-		restoredScroll.current = true;
-		try {
-			const savedScroll = Number(
-				localStorage.getItem(DISCOVER_SCROLL_KEY) || "0",
-			);
-			if (savedScroll > 0) {
-				requestAnimationFrame(() => window.scrollTo({ top: savedScroll }));
-			}
-		} catch {}
-	}, [loading]);
 
 	const toggleJobSelection = (jobId: string) => {
 		setSelectedJobIds((current) =>
@@ -242,11 +281,11 @@ export default function JobsPage() {
 	};
 
 	const handleDeleteSkipped = async () => {
-		if (skippedJobs.length === 0) return;
+		if (!globalStats || globalStats.skipped === 0) return;
 		const shouldDelete = window.confirm(
 			t("discover.deleteConfirmSkipped", {
-				count: skippedJobs.length,
-				plural: skippedJobs.length === 1 ? "" : "s",
+				count: globalStats.skipped,
+				plural: globalStats.skipped === 1 ? "" : "s",
 			}),
 		);
 		if (!shouldDelete) return;
@@ -254,20 +293,20 @@ export default function JobsPage() {
 		setBulkDeleting(true);
 		setDeleteError(null);
 		try {
-			const skippedIds = skippedJobs.map((job) => job.id);
 			const res = await fetch("/api/jobs", {
 				method: "DELETE",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ ids: skippedIds }),
+				body: JSON.stringify({ deleteSkipped: true }),
 			});
 			const data = await res.json().catch(() => ({}));
 			if (res.ok) {
 				setJobs((current) =>
-					current.filter((job) => !skippedIds.includes(job.id)),
+					current.filter((job) => job.match?.triageStatus !== "SKIP"),
 				);
 				setSelectedJobIds((current) =>
-					current.filter((id) => !skippedIds.includes(id)),
+					current.filter((id) => !jobs.find(j => j.id === id && j.match?.triageStatus === "SKIP")),
 				);
+				fetchJobs(); // Refresh stats
 			} else {
 				setDeleteError(data.error || t("discover.deleteSkippedFailed"));
 			}
@@ -338,7 +377,7 @@ export default function JobsPage() {
 			/>
 
 			<main className="p-6 md:p-10 max-w-4xl w-full mx-auto flex flex-col gap-6">
-				{!loading && jobs.length > 0 && (
+				{(totalJobsInDb !== null ? totalJobsInDb > 0 : jobs.length > 0) && (
 					<Card size="sm">
 						<CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
 							{stats.map((stat) => {
@@ -366,10 +405,14 @@ export default function JobsPage() {
 				{/* Filters Bar */}
 				<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 					<div className="relative flex-1">
-						<Search className="size-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+						{loading ? (
+							<Loader2 className="size-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none animate-spin" />
+						) : (
+							<Search className="size-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+						)}
 						<Input
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
 							placeholder={t("discover.searchPlaceholder")}
 							className="pl-9 text-sm h-9"
 						/>
@@ -377,8 +420,8 @@ export default function JobsPage() {
 
 					<div className="w-full sm:w-44">
 						<Input
-							value={locationQuery}
-							onChange={(e) => setLocationQuery(e.target.value)}
+							value={locationInput}
+							onChange={(e) => setLocationInput(e.target.value)}
 							placeholder={t("discover.locationPlaceholder")}
 							className="text-sm h-9"
 						/>
@@ -470,7 +513,7 @@ export default function JobsPage() {
 					</Alert>
 				)}
 
-				{jobs.length > 0 && (
+				{(totalJobsInDb !== null ? totalJobsInDb > 0 : jobs.length > 0) && (
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2">
 						<label className="flex items-center gap-2 text-sm text-neutral-700">
 							<input
@@ -480,14 +523,15 @@ export default function JobsPage() {
 									jobs.every((job) => selectedJobIds.includes(job.id))
 								}
 								onChange={toggleAllVisible}
-								className="size-4 rounded border-neutral-300"
+								disabled={jobs.length === 0}
+								className="size-4 rounded border-neutral-300 disabled:opacity-50"
 							/>
 							{t("discover.selectVisible")}
 						</label>
 
-						{(selectedJobIds.length > 0 || skippedJobs.length > 0) && (
+						{(selectedJobIds.length > 0 || (globalStats && globalStats.skipped > 0)) && (
 							<div className="flex flex-wrap items-center gap-3">
-								{skippedJobs.length > 0 && (
+								{globalStats && globalStats.skipped > 0 && (
 									<Button
 										type="button"
 										variant="outline"
@@ -503,7 +547,7 @@ export default function JobsPage() {
 										)}
 										<span>
 											{t("discover.deleteSkipped", {
-												count: skippedJobs.length,
+												count: globalStats.skipped,
 											})}
 										</span>
 									</Button>
@@ -536,7 +580,7 @@ export default function JobsPage() {
 				)}
 
 				{/* Jobs List */}
-				{loading ? (
+				{loading && jobs.length === 0 ? (
 					<div
 						className="rounded-2xl border border-neutral-200 bg-white p-4 flex flex-col gap-5"
 						aria-label={t("discover.loading")}
@@ -569,7 +613,7 @@ export default function JobsPage() {
 						</EmptyContent>
 					</Empty>
 				) : (
-					<div className="flex flex-col gap-4">
+					<div className={`flex flex-col gap-4 transition-opacity duration-200 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
 						{jobs.map((job) => (
 							<JobCard
 								key={job.id}

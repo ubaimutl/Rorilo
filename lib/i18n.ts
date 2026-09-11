@@ -572,6 +572,7 @@ export const TRANSLATIONS = {
     'profile.cvSummaryWork': '{count} work entries',
     'profile.cvSummaryProjects': '{count} projects',
     'profile.cvSummaryLinks': '{count} links',
+    'profile.cvAiFallbackNudge': 'Basic extraction used — set up an AI provider in Settings for better profile filling.',
   },
   de: {
     'app.workspace': 'Arbeitsbereich',
@@ -1135,6 +1136,7 @@ export const TRANSLATIONS = {
     'profile.cvSummaryWork': '{count} Berufsstationen',
     'profile.cvSummaryProjects': '{count} Projekte',
     'profile.cvSummaryLinks': '{count} Links',
+    'profile.cvAiFallbackNudge': 'Einfache Extraktion verwendet — richte einen KI-Anbieter in den Einstellungen ein, um das Profil besser zu befüllen.',
   },
   es: {
     'app.workspace': 'Espacio de trabajo',
@@ -1698,6 +1700,7 @@ export const TRANSLATIONS = {
     'profile.cvSummaryWork': '{count} empleos',
     'profile.cvSummaryProjects': '{count} proyectos',
     'profile.cvSummaryLinks': '{count} enlaces',
+    'profile.cvAiFallbackNudge': 'Se usó extracción básica — configura un proveedor de IA en Ajustes para mejorar el perfil.',
   },
   nl: {
     'app.workspace': 'Werkruimte',
@@ -2261,6 +2264,7 @@ export const TRANSLATIONS = {
     'profile.cvSummaryWork': '{count} werkervaringen',
     'profile.cvSummaryProjects': '{count} projecten',
     'profile.cvSummaryLinks': '{count} links',
+    'profile.cvAiFallbackNudge': 'Eenvoudige extractie gebruikt — stel een AI-provider in via Instellingen voor betere profielvulling.',
   },
 } as const;
 

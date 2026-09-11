@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Loader2, Upload, FileText, Check, ChevronDown, ChevronUp, ClipboardPaste } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   const [pastedCvText, setPastedCvText] = useState("");
   const [parsingPasted, setParsingPasted] = useState(false);
   const [cvSummary, setCvSummary] = useState<string[]>([]);
+  const [cvAiNudge, setCvAiNudge] = useState(false);
 
   // Active CV record
   const [activeCv, setActiveCv] = useState<{
@@ -157,6 +159,7 @@ export default function ProfilePage() {
 
     setUploadingCv(true);
     setCvNotice(null);
+    setCvAiNudge(false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -166,6 +169,7 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok) {
         setCvNotice(t('profile.cvProcessedFile', { name: file.name }));
+        setCvAiNudge(data.parsedByAi === false);
         if (data.summary) {
           setCvSummary([
             data.summary.title ? t('profile.cvSummaryTitle', { title: data.summary.title }) : null,
@@ -193,6 +197,7 @@ export default function ProfilePage() {
     if (!pastedCvText.trim()) return;
     setParsingPasted(true);
     setCvNotice(null);
+    setCvAiNudge(false);
 
     try {
       const res = await fetch("/api/cv/upload", {
@@ -203,6 +208,7 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok) {
         setCvNotice(t('profile.cvProcessedPaste'));
+        setCvAiNudge(data.parsedByAi === false);
         if (data.summary) {
           setCvSummary([
             data.summary.title ? t('profile.cvSummaryTitle', { title: data.summary.title }) : null,
@@ -381,7 +387,18 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Two Options: Upload or Paste */}
+            {cvAiNudge && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-800">
+                <span className="mt-px shrink-0 text-amber-500">⚠</span>
+                <span>
+                  {t('profile.cvAiFallbackNudge')}{' '}
+                  <Link href="/settings" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+                    Settings →
+                  </Link>
+                </span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Option 1: File Upload */}
               <div className="p-4 bg-neutral-50/70 border border-neutral-200 rounded-xl space-y-3 flex flex-col justify-between">
