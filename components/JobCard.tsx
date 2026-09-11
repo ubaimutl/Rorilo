@@ -226,7 +226,7 @@ export function JobCard({ job, onSaveToggle, onDelete, selected = false, onSelec
         <div className="flex flex-wrap items-center gap-1.5">
           {salaryStr && <span className="text-sm font-semibold text-neutral-900 mr-1">{salaryStr}</span>}
           {techs.slice(0, 3).map((tech) => (
-            <Badge key={tech} variant="outline">
+            <Badge key={tech} variant="secondary" className="font-normal border border-border/50 text-neutral-800">
               {tech}
             </Badge>
           ))}

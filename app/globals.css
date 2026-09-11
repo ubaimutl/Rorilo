@@ -95,7 +95,7 @@
   --secondary: oklch(0.414 0.014 84.6);
   --secondary-foreground: oklch(0.899 0.026 94.8);
   --muted: oklch(0.414 0.014 84.6);
-  --muted-foreground: oklch(0.699 0.022 91.7);
+  --muted-foreground: oklch(0.76 0.02 92);
   --accent: oklch(0.414 0.014 84.6);
   --accent-foreground: oklch(0.899 0.026 94.8);
   --destructive: oklch(0.704 0.191 22.216);
@@ -236,7 +236,7 @@
   .dark .text-neutral-300,
   .dark .text-slate-500,
   .dark .text-slate-400 {
-    color: oklch(0.565 0.023 94.7);
+    color: oklch(0.68 0.02 92);
   }
 
   .dark .bg-neutral-100,
