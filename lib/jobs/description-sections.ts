@@ -45,12 +45,17 @@ const HEADING_KEYWORDS = new Set(
     // English
     'about the role',
     'the role',
+    'about you',
+    'who you are',
     'about us',
+    'who we are',
     'about the company',
     'responsibilities',
     'what you will do',
     "what you'll do",
     'requirements',
+    'what you need',
+    "what you'll need",
     'required qualifications',
     'qualifications',
     'must have',
@@ -136,7 +141,19 @@ function splitLongParagraph(text: string, maxLength = 500): string[] {
  */
 export function parseDescription(text: string | undefined | null): DescriptionBlock[] {
   if (!text) return [];
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  
+  let cleanedText = text.replace(/\r\n/g, '\n');
+
+  // Attempt to fix bad scraping where block elements were joined without spaces.
+  // e.g. "About YouYou have a knack" -> "About You\n\nYou have a knack"
+  // e.g. "About UsConstructor is..." -> "About Us\n\nConstructor is..."
+  const knownHeadings = Array.from(HEADING_KEYWORDS).sort((a, b) => b.length - a.length);
+  const headingRegex = new RegExp(`\\b(${knownHeadings.join('|')})([A-Z])`, 'gi');
+  cleanedText = cleanedText.replace(headingRegex, (match, heading, nextChar) => {
+    return `${heading}\n\n${nextChar}`;
+  });
+
+  const lines = cleanedText.split('\n');
 
   const blocks: DescriptionBlock[] = [];
   let pendingList: string[] = [];
