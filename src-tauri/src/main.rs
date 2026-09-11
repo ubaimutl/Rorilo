@@ -223,6 +223,7 @@ fn spawn_server(
         .env("PORT", port)
         .env("DATABASE_URL", database_url)
         .env("HOSTNAME", "127.0.0.1")
+        .env("RORILO_DISABLE_AUTH", "1")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());

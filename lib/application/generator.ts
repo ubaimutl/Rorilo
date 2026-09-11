@@ -34,55 +34,167 @@ function countSignals(text: string, signals: string[]) {
   return signals.reduce((score, signal) => score + (lower.includes(signal) ? 1 : 0), 0);
 }
 
-function detectJobLanguage(job: Job): 'German' | 'English' | null {
-  const text = `${job.title}\n${job.description}`;
-  const germanScore = countSignals(text, [
-    'bewerbung',
-    'berufserfahrung',
-    'kenntnisse',
-    'tätigkeit',
-    'aufgaben',
-    'anforderungen',
-    'kaufmännisch',
-    'datenerfasser',
-    'sachbearbeiter',
-    'mitarbeiter',
-    'deutsch',
-    'm/w/d',
-  ]) + (/[äöüß]/i.test(text) ? 2 : 0);
-  const englishScore = countSignals(text, [
-    'apply',
-    'application',
-    'experience',
-    'responsibilities',
-    'requirements',
-    'qualifications',
-    'skills',
-    'team',
-    'role',
-    'position',
-    'remote',
-    'hybrid',
-    'full-time',
-    'part-time',
-    'm/f/d',
-  ]);
+type DetectedLanguage = 'Dutch' | 'German' | 'French' | 'Spanish' | 'Italian' | 'Portuguese' | 'English';
 
-  if (englishScore >= 2 && englishScore > germanScore) return 'English';
-  if (germanScore >= 2 && germanScore > englishScore) return 'German';
-  return null;
+function detectJobLanguage(job: Job): DetectedLanguage | null {
+  const text = `${job.title}\n${job.description}`;
+
+  const scores: [DetectedLanguage, number][] = [
+    [
+      'Dutch',
+      countSignals(text, [
+        'vacature',
+        'sollicitatie',
+        'werkervaring',
+        'functie',
+        'vereisten',
+        'verantwoordelijkheden',
+        'afdeling',
+        'collega',
+        'bedrijf',
+        'ervaring',
+        'nederland',
+        'amsterdam',
+        'rotterdam',
+        'fulltime',
+        'parttime',
+        'dienstverband',
+        'medewerker',
+        'werken',
+      ]) + (/[ij]/i.test(text) && /\b(wij|zijn|voor|van|met|het|een|op|te|aan)\b/i.test(text) ? 3 : 0),
+    ],
+    [
+      'German',
+      countSignals(text, [
+        'bewerbung',
+        'berufserfahrung',
+        'kenntnisse',
+        'tätigkeit',
+        'aufgaben',
+        'anforderungen',
+        'kaufmännisch',
+        'datenerfasser',
+        'sachbearbeiter',
+        'mitarbeiter',
+        'deutsch',
+        'm/w/d',
+      ]) + (/[äöüß]/i.test(text) ? 2 : 0),
+    ],
+    [
+      'French',
+      countSignals(text, [
+        'candidature',
+        'expérience',
+        'poste',
+        'entreprise',
+        'compétences',
+        'responsabilités',
+        'profil',
+        'missions',
+        'rejoindre',
+        'equipe',
+        'rémunération',
+        'cdi',
+        'cdd',
+      ]) + (/[àâéèêëîïôùûüç]/i.test(text) ? 2 : 0),
+    ],
+    [
+      'Spanish',
+      countSignals(text, [
+        'vacante',
+        'solicitud',
+        'experiencia',
+        'empresa',
+        'habilidades',
+        'responsabilidades',
+        'requisitos',
+        'jornada',
+        'incorporación',
+        'contrato',
+        'puesto',
+        'equipo',
+      ]) + (/[áéíóúüñ¿¡]/i.test(text) ? 2 : 0),
+    ],
+    [
+      'Italian',
+      countSignals(text, [
+        'candidatura',
+        'esperienza',
+        'azienda',
+        'competenze',
+        'responsabilità',
+        'requisiti',
+        'posizione',
+        'contratto',
+        'lavoro',
+        'team',
+        'collega',
+        'offerta',
+      ]) + (/[àèéìíîòóùú]/i.test(text) ? 2 : 0),
+    ],
+    [
+      'Portuguese',
+      countSignals(text, [
+        'candidatura',
+        'experiência',
+        'empresa',
+        'habilidades',
+        'responsabilidades',
+        'requisitos',
+        'vaga',
+        'contrato',
+        'equipe',
+        'trabalho',
+        'oportunidade',
+        'benefícios',
+      ]) + (/[ãõáéíóúâêôà]/i.test(text) ? 2 : 0),
+    ],
+    [
+      'English',
+      countSignals(text, [
+        'apply',
+        'application',
+        'experience',
+        'responsibilities',
+        'requirements',
+        'qualifications',
+        'skills',
+        'team',
+        'role',
+        'position',
+        'remote',
+        'hybrid',
+        'full-time',
+        'part-time',
+        'm/f/d',
+      ]),
+    ],
+  ];
+
+  // Pick the highest scoring language (must score >= 2 to qualify)
+  let best: DetectedLanguage | null = null;
+  let bestScore = 1; // minimum threshold
+  for (const [lang, score] of scores) {
+    if (score > bestScore) {
+      bestScore = score;
+      best = lang;
+    }
+  }
+  return best;
 }
 
 function resolveDraftLanguage(requestedLanguage: string, job: Job): string {
   const normalized = requestedLanguage.trim();
-  const jobLanguage = detectJobLanguage(job);
-  if (jobLanguage) return jobLanguage;
 
   if (!normalized || normalized.toLowerCase() === 'auto') {
-    return 'the primary language of the job posting';
+    // Auto: detect the job posting language and use it precisely
+    const detected = detectJobLanguage(job);
+    return detected ?? 'English';
   }
+
   return normalized;
 }
+
 
 function getLengthInstruction(length: string): string {
   if (length === 'short') {

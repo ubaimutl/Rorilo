@@ -60,20 +60,53 @@ export function calculateDeterministicMatch(
   const jobReqSkills = parseJsonArray(job.analysis?.requiredSkills);
   const allJobSkills = Array.from(new Set([...jobTechs, ...jobReqSkills]));
 
+  /**
+   * Checks whether a skill token appears as a whole word in a candidate string.
+   * This prevents HTML/URL artifacts (e.g. "javascript:void(0)") from matching
+   * a clean skill like "javascript" via simple substring containment.
+   */
+  function skillTokenMatch(haystack: string, needle: string): boolean {
+    if (needle.length < 3) return false; // ignore trivially short tokens
+    // Exact containment — only allowed when both sides are clean identifiers
+    // (no special URL/HTML characters in needle or surrounding context)
+    const hasSpecialChars = /[:/\\.<>(){}[\]@#&?=%]/.test(needle);
+    if (hasSpecialChars) return false;
+    // Use word-boundary regex to avoid matching inside URLs or HTML tokens
+    try {
+      const pattern = new RegExp(`(?<![\\w.:/])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.:/])`, 'i');
+      return pattern.test(haystack);
+    } catch {
+      return haystack.includes(needle);
+    }
+  }
+
   if (allJobSkills.length === 0) {
     skillsScore = 22; // Neutral average if listing doesn't specify technologies
   } else {
     let matchedCount = 0;
     for (const skill of allJobSkills) {
-      const lowerSkill = skill.toLowerCase();
-      if (userSkills.has(lowerSkill) || Array.from(userSkills).some((us) => us.includes(lowerSkill) || lowerSkill.includes(us))) {
+      const lowerSkill = skill.toLowerCase().trim();
+      // Skip garbage tokens: skills that look like URLs, HTML tags, or are too long
+      if (lowerSkill.length > 60 || /[:/\\<>]/.test(lowerSkill)) {
+        continue;
+      }
+      const matched =
+        userSkills.has(lowerSkill) ||
+        Array.from(userSkills).some(
+          (us) =>
+            // user skill contains job skill as a whole word (e.g. "node.js" ⊇ "node")
+            (us.length >= 3 && skillTokenMatch(us, lowerSkill)) ||
+            // job skill contains user skill as a whole word (e.g. "typescript" ⊇ "ts" — blocked by min length)
+            (lowerSkill.length >= 3 && us.length >= 3 && skillTokenMatch(lowerSkill, us))
+        );
+      if (matched) {
         matchedCount++;
         strongMatches.push(skill);
       } else {
         missingSkills.push(skill);
       }
     }
-    const ratio = matchedCount / allJobSkills.length;
+    const ratio = allJobSkills.length > 0 ? matchedCount / allJobSkills.length : 0;
     skillsScore = Math.round(ratio * 30);
   }
 

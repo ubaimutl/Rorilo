@@ -176,6 +176,8 @@ npx prisma db push
 | Variable               | Required | Purpose                                                                   |
 | ---------------------- | -------- | ------------------------------------------------------------------------- |
 | `DATABASE_URL`         | yes      | Prisma database connection. Defaults to local SQLite in `.env.example`.   |
+| `RORILO_AUTH_SECRET`   | no       | Enables Basic Auth for hosted deployments when set.                       |
+| `RORILO_AUTH_USER`     | no       | Optional Basic Auth username. Defaults to `rorilo`.                       |
 | `AI_BASE_URL`          | no       | OpenAI-compatible API base URL.                                           |
 | `AI_API_KEY`           | no       | Model provider key. Can also be saved from Settings.                      |
 | `AI_MODEL`             | no       | Default model name.                                                       |
