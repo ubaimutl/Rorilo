@@ -31,12 +31,16 @@ export async function POST(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    const profile = await prisma.userProfile.findFirst({ where: { id: 'default' } });
+    const [profile, preferences] = await Promise.all([
+      prisma.userProfile.findFirst({ where: { id: 'default' } }),
+      prisma.jobPreference.findFirst({ where: { id: 'default' } }),
+    ]);
 
     if (validation.value.kind === 'cover-letter') {
       const revised = await reviseCoverLetter(
         job,
         profile,
+        preferences,
         validation.value.content,
         validation.value.instruction
       );
@@ -46,6 +50,7 @@ export async function POST(
     const revised = await reviseEmailDraft(
       job,
       profile,
+      preferences,
       validation.value.subject,
       validation.value.body,
       validation.value.instruction
