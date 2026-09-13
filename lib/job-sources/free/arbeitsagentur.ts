@@ -130,11 +130,12 @@ export async function searchArbeitsagentur(params: JobSearchParams): Promise<Job
 
   const search = (await fetchJson(`${AA_BASE}/pc/v6/jobs?${query.toString()}`, {
     headers: AA_HEADERS,
-  })) as { ergebnisliste?: AaSearchItem[] };
-  if (!search || !Array.isArray(search.ergebnisliste)) {
+  })) as { ergebnisliste?: AaSearchItem[]; maxErgebnisse?: number };
+  
+  if (!search || (search.maxErgebnisse === undefined && !Array.isArray(search.ergebnisliste))) {
     throw new Error('Arbeitsagentur returned an unexpected response. Try again later.');
   }
-  const items = search.ergebnisliste.slice(0, limit);
+  const items = Array.isArray(search.ergebnisliste) ? search.ergebnisliste.slice(0, limit) : [];
 
   const jobs: NormalizedJobInput[] = [];
   for (const item of items) {
