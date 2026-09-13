@@ -19,6 +19,7 @@ import {
   RotateCcw,
   TriangleAlert,
   ArrowLeft,
+  Trash2,
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { PageHeader } from '@/components/PageHeader';
@@ -135,6 +136,20 @@ export default function PreparedJobsPage() {
       loadJobDetails(selectedJobId);
     }
   }, [selectedJobId]);
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm(t('common.confirmDelete' as any) || 'Are you sure you want to delete this job?')) return;
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete job');
+      setPreparedJobs(prev => prev.filter(item => item.job.id !== jobId));
+      if (selectedJobId === jobId) setSelectedJobId(null);
+      notify({ title: t('common.deleted' as any) || 'Deleted successfully', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      notify({ title: t('common.error' as any) || 'Failed to delete job', type: 'error' });
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     if (!selectedJob) return;
@@ -499,7 +514,20 @@ export default function PreparedJobsPage() {
                       <span className="font-medium text-neutral-600 capitalize">
                         {item.status.toLowerCase().replace('_', ' ')}
                       </span>
-                      <span>{formatDate(item.updatedAt)}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span>{formatDate(item.updatedAt)}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteJob(item.job.id);
+                          }}
+                          className="p-1 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                          title={t('common.delete' as any) || 'Delete'}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
                     {inactiveDays >= 3 && (
                       <p className="mt-2 text-xs font-medium text-amber-700">
@@ -585,6 +613,16 @@ export default function PreparedJobsPage() {
                     <option value="OFFER">{t('tracker.colOffer')}</option>
                     <option value="REJECTED">{t('tracker.colRejected')}</option>
                   </select>
+
+                  <Button
+                    onClick={() => handleDeleteJob(selectedJob.id)}
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-8 px-2 text-neutral-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    title={t('common.delete' as any) || 'Delete'}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
 
                   {selectedJob.applicationUrl && (
                     <a
