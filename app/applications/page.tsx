@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, LayoutGrid, List, ChevronRight, ChevronLeft, KanbanSquare, Download } from 'lucide-react';
+import { ArrowRight, LayoutGrid, List, ChevronRight, ChevronLeft, KanbanSquare, Download, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { PageHeader } from '@/components/PageHeader';
@@ -68,6 +68,19 @@ export default function ApplicationsPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm(t('common.confirmDelete' as any) || 'Are you sure you want to delete this job?')) return;
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete job');
+      setApplications(applications.filter(a => a.job.id !== jobId));
+      notify({ title: 'Job deleted successfully', type: 'success' });
+    } catch (err) {
+      console.error(err);
+      notify({ title: 'Failed to delete job', type: 'error' });
     }
   };
 
@@ -371,6 +384,13 @@ export default function ApplicationsPage() {
                               </button>
                             )}
 
+                            <button
+                              onClick={() => handleDeleteJob(app.job.id)}
+                              className="p-1 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                              title={t('common.delete' as any) || 'Delete'}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
                             <Link
                               href={`/jobs/${app.job.id}`}
                               className="p-1 rounded text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
@@ -443,6 +463,13 @@ export default function ApplicationsPage() {
                       ))}
                     </select>
 
+                    <button
+                      onClick={() => handleDeleteJob(app.job.id)}
+                      className="text-neutral-400 hover:text-red-600 p-1 transition-colors cursor-pointer"
+                      title={t('common.delete' as any) || 'Delete'}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
                     <Link
                       href={`/jobs/${app.job.id}`}
                       className="text-neutral-400 hover:text-neutral-900 p-1 transition-colors"
