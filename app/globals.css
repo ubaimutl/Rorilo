@@ -122,8 +122,8 @@
     @apply border-border outline-ring/50;
   }
   ::selection {
-    background-color: var(--card);
-    color: oklch(0.985 0 0);
+    background-color: oklch(0.813 0.038 95.1);
+    color: oklch(0.334 0.011 84.6);
   }
   .dark ::selection {
     background-color: oklch(0.813 0.038 95.1);
