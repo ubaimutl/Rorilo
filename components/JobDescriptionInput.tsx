@@ -9,13 +9,15 @@ import { useI18n } from '@/components/I18nProvider';
 import { validateManualDescription } from '@/lib/jobs/manual-description';
 
 interface JobDescriptionInputProps {
+  initialValue?: string;
+  onCancel?: () => void;
   jobId: string;
   onSaved: () => Promise<void> | void;
 }
 
-export function JobDescriptionInput({ jobId, onSaved }: JobDescriptionInputProps) {
+export function JobDescriptionInput({ jobId, initialValue = '', onSaved, onCancel }: JobDescriptionInputProps) {
   const { t } = useI18n();
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -98,6 +100,18 @@ export function JobDescriptionInput({ jobId, onSaved }: JobDescriptionInputProps
         {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
         <span>{saving ? t('common.saving') : t('jobdetail.manualSave')}</span>
       </Button>
+      {onCancel && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onCancel}
+          disabled={saving}
+          className="h-8 text-xs ml-2"
+        >
+          {t('common.cancel') || 'Cancel'}
+        </Button>
+      )}
     </div>
   );
 }

@@ -72,7 +72,7 @@ export const KNOWN_JOB_SOURCES: Record<string, JobSourceDefinition> = {
     name: 'Xing Jobs (DACH)',
     tagline: 'Premier business network across Germany, Austria & Switzerland',
     coverage: { countries: ['DE', 'AT', 'CH'], regions: ['DACH'] },
-    actorId: 'memo23/xing-scraper',
+    actorId: 'fetchfinch/xing-jobs-scraper',
     defaultEnabled: true,
     recommendedFor: ['DE', 'AT', 'CH'],
     buildInput: ({ title, keywords, location, limit }) => {

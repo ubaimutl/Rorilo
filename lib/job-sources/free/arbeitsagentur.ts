@@ -75,6 +75,7 @@ export function normalizeAaJob(item: AaSearchItem, details: AaDetails | null): N
   const location = [adresse?.plz, adresse?.ort].filter(Boolean).join(' ');
   const description = sanitizeDescription(details?.stellenangebotsBeschreibung || '');
   const externeUrl = details?.externeUrl || item.externeUrl;
+  const fallbackUrl = item.referenznummer ? `https://www.arbeitsagentur.de/jobsuche/jobdetail/${item.referenznummer}` : undefined;
   const logoHash = details?.arbeitgeberKundennummerHash || item.arbeitgeberKundennummerHash;
   const vollzeit = details?.arbeitszeitVollzeit ?? item.arbeitszeitVollzeit;
   const teilzeit = details?.arbeitszeitTeilzeit ?? item.arbeitszeitTeilzeit;
@@ -100,8 +101,8 @@ export function normalizeAaJob(item: AaSearchItem, details: AaDetails | null): N
     benefits: [],
     technologies: extractTechnologies(`${title} ${description}`),
     languageRequirements: [],
-    applicationUrl: externeUrl,
-    originalUrl: externeUrl,
+    applicationUrl: externeUrl || fallbackUrl,
+    originalUrl: externeUrl || fallbackUrl,
     datePosted: item.veroeffentlichungszeitraum?.von
       ? new Date(item.veroeffentlichungszeitraum.von)
       : new Date(),

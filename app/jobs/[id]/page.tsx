@@ -18,6 +18,7 @@ import {
   Briefcase,
   TriangleAlert,
   FileText,
+  Edit2,
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { PageHeader } from '@/components/PageHeader';
@@ -66,6 +67,7 @@ export default function JobDetailPage() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<CoverLetterTemplate>('german_din');
   const [enriching, setEnriching] = useState(false);
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [enrichError, setEnrichError] = useState<string | null>(null);
 
   // Editable application content
@@ -524,9 +526,31 @@ export default function JobDetailPage() {
                   )}
                 </div>
               )}
-              {hasDescription && <FormattedDescription text={job.description} />}
-              {descriptionLength < 200 && (
-                <JobDescriptionInput jobId={job.id} onSaved={() => fetchJob()} />
+              {!isEditingDesc && hasDescription && (
+                <div className="group relative">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsEditingDesc(true)}
+                    className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity z-10 size-8 bg-white/80 backdrop-blur-sm"
+                    title={t('common.edit' as any) || 'Edit description'}
+                  >
+                    <Edit2 className="size-3.5" />
+                  </Button>
+                  <FormattedDescription text={job.description} />
+                </div>
+              )}
+              
+              {(!hasDescription || isEditingDesc || descriptionLength < 200) && (
+                <JobDescriptionInput 
+                  jobId={job.id} 
+                  initialValue={job.description || ''} 
+                  onSaved={() => {
+                    setIsEditingDesc(false);
+                    fetchJob();
+                  }}
+                  onCancel={hasDescription && descriptionLength >= 200 ? () => setIsEditingDesc(false) : undefined}
+                />
               )}
             </div>
           </div>
