@@ -78,12 +78,15 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
-    const validation = validateManualDescription(body?.description);
-    if (!validation.ok) {
-      return NextResponse.json(
-        { error: 'Please provide a job description between 50 and 20000 characters.' },
-        { status: 400 }
-      );
+        if (body.description !== undefined) {
+      const validation = validateManualDescription(body.description);
+      if (!validation.ok) {
+        return NextResponse.json(
+          { error: 'Please provide a job description between 50 and 20000 characters.' },
+          { status: 400 }
+        );
+      }
+      body._descValidated = validation.value;
     }
 
     const job = await prisma.job.findUnique({ where: { id } });
@@ -93,7 +96,10 @@ export async function PATCH(
 
     const updated = await prisma.job.update({
       where: { id },
-      data: { description: validation.value },
+      data: {
+        description: body._descValidated !== undefined ? body._descValidated : undefined,
+        contactEmail: body.contactEmail !== undefined ? body.contactEmail : undefined,
+      },
     });
 
     return NextResponse.json({

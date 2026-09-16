@@ -68,6 +68,25 @@ export default function PreparedJobsPage() {
   const [revisingCover, setRevisingCover] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingCover, setSavingCover] = useState(false);
+  const [editingContactEmail, setEditingContactEmail] = useState(false);
+  const [contactEmailInput, setContactEmailInput] = useState('');
+
+  const handleSaveContactEmail = async () => {
+    if (!selectedJob) return;
+    try {
+      const res = await fetch(`/api/jobs/${selectedJob.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactEmail: contactEmailInput }),
+      });
+      if (res.ok) {
+        setEditingContactEmail(false);
+        await loadJobDetails(selectedJob.id);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchPreparedJobs = async () => {
     setLoading(true);
@@ -698,14 +717,28 @@ export default function PreparedJobsPage() {
                 {activeTab === 'material' && (
                   <div className="space-y-8">
                     {/* Email Draft Section */}
-                    {selectedJob.contactEmail && (
-                      <div className="space-y-4">
+                    <div className="space-y-4">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <h2 className="text-sm font-semibold text-neutral-900">
-                              {t('material.emailTo', { email: selectedJob.contactEmail })}
-                            </h2>
-                            <p className="text-xs text-neutral-500 mt-0.5">
+                          <div className="flex-1">
+                            {editingContactEmail ? (
+                              <div className="flex items-center gap-2 max-w-sm">
+                                <Input 
+                                  value={contactEmailInput} 
+                                  onChange={(e) => setContactEmailInput(e.target.value)} 
+                                  placeholder="Recruiter email..." 
+                                  className="h-8 text-xs" 
+                                />
+                                <Button size="sm" onClick={handleSaveContactEmail} className="h-8 text-xs px-3">{t('common.save' as any) || 'Save'}</Button>
+                                {selectedJob.contactEmail && <Button size="sm" variant="ghost" onClick={() => setEditingContactEmail(false)} className="h-8 px-2 text-xs">{t('common.cancel' as any) || 'Cancel'}</Button>}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setEditingContactEmail(true)}>
+                                <h2 className="text-sm font-semibold text-neutral-900 border-b border-dashed border-neutral-300 pb-0.5">
+                                  {selectedJob.contactEmail ? t('material.emailTo', { email: selectedJob.contactEmail }) : 'Set Recruiter Email'}
+                                </h2>
+                              </div>
+                            )}
+                            <p className="text-xs text-neutral-500 mt-1">
                               {t('material.tailoredHint')}
                             </p>
                           </div>
@@ -835,7 +868,6 @@ export default function PreparedJobsPage() {
 
                         <Separator />
                       </div>
-                    )}
 
                     {/* Cover Letter Section */}
                     <div className="space-y-4">
