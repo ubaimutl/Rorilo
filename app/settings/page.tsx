@@ -76,6 +76,8 @@ export default function SettingsPage() {
   const [emailUser, setEmailUser] = useState('');
   const [emailClientId, setEmailClientId] = useState('');
   const [emailClientSecret, setEmailClientSecret] = useState('');
+  const [emailRefreshToken, setEmailRefreshToken] = useState('');
+  const [hasEmailRefreshToken, setHasEmailRefreshToken] = useState(false);
   const [emailTesting, setEmailTesting] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
   const [emailTestResult, setEmailTestResult] = useState<string | null>(null);
@@ -386,6 +388,7 @@ export default function SettingsPage() {
             userEmail: emailUser,
             clientId: emailClientId || undefined,
             clientSecret: emailClientSecret || undefined,
+            refreshToken: emailRefreshToken || undefined,
           },
         }),
       });
