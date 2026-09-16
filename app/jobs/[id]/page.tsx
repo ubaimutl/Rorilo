@@ -78,6 +78,8 @@ export default function JobDetailPage() {
   const [revisingCover, setRevisingCover] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingCover, setSavingCover] = useState(false);
+  const [editingContactEmail, setEditingContactEmail] = useState(false);
+  const [contactEmailInput, setContactEmailInput] = useState('');
 
   const fetchJob = async (trackView = false) => {
     if (!id) return;
@@ -142,6 +144,23 @@ export default function JobDetailPage() {
     }
   };
 
+  const handleSaveContactEmail = async () => {
+    if (!job) return;
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactEmail: contactEmailInput }),
+      });
+      if (res.ok) {
+        setEditingContactEmail(false);
+        await fetchJob();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleCreateDraft = async () => {
     if (!job?.application?.id) return;
     setDraftingEmail(true);
@@ -157,10 +176,10 @@ export default function JobDetailPage() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setDraftNotice(t('material.draftCreated'));
       } else {
-        setDraftNotice(data.message || t('material.draftFallback'));
+        setDraftNotice(data.error || data.message || t('material.draftFallback'));
       }
       await fetchJob();
     } catch (err) {
@@ -739,10 +758,34 @@ export default function JobDetailPage() {
           {/* Email Flow */}
           {isEmailMethod && (
             <div className="space-y-3.5 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-semibold text-neutral-900">
-                  {t('material.emailTo', { email: job.contactEmail })}
-                </span>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <div className="flex-1">
+                  {editingContactEmail ? (
+                    <div className="flex items-center gap-2 max-w-sm">
+                      <Input 
+                        value={contactEmailInput} 
+                        onChange={(e) => setContactEmailInput(e.target.value)} 
+                        placeholder="Recruiter email..." 
+                        className="h-8 text-xs" 
+                      />
+                      <Button size="sm" onClick={handleSaveContactEmail} className="h-8 text-xs px-3">{t('revise.save')}</Button>
+                      {job.contactEmail && <Button size="sm" variant="ghost" onClick={() => setEditingContactEmail(false)} className="h-8 px-2 text-xs">{t('common.cancel')}</Button>}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setEditingContactEmail(true)}>
+                      {job.contactEmail ? (
+                        <h2 className="text-sm font-semibold text-neutral-900 border-b border-dashed border-neutral-300 pb-0.5 hover:border-neutral-500 transition-colors">
+                          {t('material.emailTo', { email: job.contactEmail })}
+                        </h2>
+                      ) : (
+                        <Button variant="secondary" size="sm" className="h-7 text-xs gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200">
+                          <Mail className="size-3.5" />
+                          Set Recruiter Email
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${emailBody}`);

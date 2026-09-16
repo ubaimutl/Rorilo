@@ -211,10 +211,10 @@ export default function PreparedJobsPage() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setDraftNotice(t('material.draftCreated'));
       } else {
-        setDraftNotice(data.message || t('material.draftFallback'));
+        setDraftNotice(data.error || data.message || t('material.draftFallback'));
       }
     } catch (err) {
       setDraftNotice((err as Error).message);
@@ -721,24 +721,31 @@ export default function PreparedJobsPage() {
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="flex-1">
                             {editingContactEmail ? (
-                              <div className="flex items-center gap-2 max-w-sm">
+                              <div className="flex items-center gap-2 max-w-sm mb-1.5">
                                 <Input 
                                   value={contactEmailInput} 
                                   onChange={(e) => setContactEmailInput(e.target.value)} 
                                   placeholder="Recruiter email..." 
                                   className="h-8 text-xs" 
                                 />
-                                <Button size="sm" onClick={handleSaveContactEmail} className="h-8 text-xs px-3">{t('common.save' as any) || 'Save'}</Button>
-                                {selectedJob.contactEmail && <Button size="sm" variant="ghost" onClick={() => setEditingContactEmail(false)} className="h-8 px-2 text-xs">{t('common.cancel' as any) || 'Cancel'}</Button>}
+                                <Button size="sm" onClick={handleSaveContactEmail} className="h-8 text-xs px-3">{t('revise.save')}</Button>
+                                {selectedJob.contactEmail && <Button size="sm" variant="ghost" onClick={() => setEditingContactEmail(false)} className="h-8 px-2 text-xs">{t('common.cancel')}</Button>}
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setEditingContactEmail(true)}>
-                                <h2 className="text-sm font-semibold text-neutral-900 border-b border-dashed border-neutral-300 pb-0.5">
-                                  {selectedJob.contactEmail ? t('material.emailTo', { email: selectedJob.contactEmail }) : 'Set Recruiter Email'}
-                                </h2>
+                              <div className="flex items-center gap-2 group cursor-pointer mb-1.5" onClick={() => setEditingContactEmail(true)}>
+                                {selectedJob.contactEmail ? (
+                                  <h2 className="text-sm font-semibold text-neutral-900 border-b border-dashed border-neutral-300 pb-0.5 hover:border-neutral-500 transition-colors">
+                                    {t('material.emailTo', { email: selectedJob.contactEmail })}
+                                  </h2>
+                                ) : (
+                                  <Button variant="secondary" size="sm" className="h-7 text-xs gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200">
+                                    <Mail className="size-3.5" />
+                                    Set Recruiter Email
+                                  </Button>
+                                )}
                               </div>
                             )}
-                            <p className="text-xs text-neutral-500 mt-1">
+                            <p className="text-xs text-neutral-500">
                               {t('material.tailoredHint')}
                             </p>
                           </div>

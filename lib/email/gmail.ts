@@ -18,10 +18,6 @@ export class GmailProvider implements EmailProvider {
   }
 
   private async getValidAccessToken(): Promise<string> {
-    if (this.config.accessToken) {
-      return this.config.accessToken;
-    }
-
     if (this.config.clientId && this.config.clientSecret && this.config.refreshToken) {
       const res = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -43,6 +39,9 @@ export class GmailProvider implements EmailProvider {
           data: { accessToken: data.access_token },
         });
         return data.access_token;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(`Google Auth Error: ${errData.error || res.statusText} - ${errData.error_description || ''}`);
       }
     }
 

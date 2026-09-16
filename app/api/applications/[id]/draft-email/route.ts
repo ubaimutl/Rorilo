@@ -57,6 +57,10 @@ export async function POST(
       body: emailBody,
     });
 
+    if (!result.success) {
+      return NextResponse.json({ error: result.message || 'Failed to create draft' }, { status: 500 });
+    }
+
     // Update status to DRAFT_CREATED
     await prisma.application.update({
       where: { id: application.id },

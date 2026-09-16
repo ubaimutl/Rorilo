@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader2, Plus, Trash2, Mail, ChevronDown, ChevronUp, CheckCircle2, ExternalLink, X, Info, Download, Upload, Database } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -79,9 +79,12 @@ export default function SettingsPage() {
   const [emailRefreshToken, setEmailRefreshToken] = useState('');
   const [hasEmailRefreshToken, setHasEmailRefreshToken] = useState(false);
   const [emailTesting, setEmailTesting] = useState(false);
+  const [hasEmailClientId, setHasEmailClientId] = useState(false);
+  const [hasEmailClientSecret, setHasEmailClientSecret] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
   const [emailTestResult, setEmailTestResult] = useState<string | null>(null);
   const [emailSaveResult, setEmailSaveResult] = useState<string | null>(null);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
 
   // Company Logos (logo.dev) State
   const [logoToken, setLogoToken] = useState('');
@@ -142,6 +145,9 @@ export default function SettingsPage() {
       }
       if (data.email) {
         setEmailUser(data.email.userEmail || '');
+        setHasEmailClientId(data.email.hasClientId);
+        setHasEmailClientSecret(data.email.hasClientSecret);
+        setHasEmailRefreshToken(data.email.hasRefreshToken);
       }
       if (data.logo) {
         setHasLogoToken(data.logo.hasToken);
@@ -163,6 +169,19 @@ export default function SettingsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error')) {
+      setAuthNotice(`Auth failed: ${params.get('error')}`);
+      window.history.replaceState({}, '', '/settings');
+    }
+    if (params.get('success')) {
+      setAuthNotice(params.get('success'));
+      fetchSettings();
+      window.history.replaceState({}, '', '/settings');
+    }
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -1434,7 +1453,7 @@ export default function SettingsPage() {
                   id="gmail-cid"
                   value={emailClientId}
                   onChange={(e) => setEmailClientId(e.target.value)}
-                  placeholder={t('settings.emailClientIdPh')}
+                  placeholder={hasEmailClientId ? '•••••••••••••••• (Saved)' : t('settings.emailClientIdPh')}
                   className="font-mono text-xs h-8"
                 />
               </div>
@@ -1453,19 +1472,18 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestEmail}
-                  disabled={emailTesting}
-                  className="text-xs h-7"
-                >
+                <a href="/api/auth/google" className={buttonVariants({ variant: 'default', size: 'sm', className: 'text-xs h-7 px-3 bg-blue-600 hover:bg-blue-700' })}>Sign in with Google</a>
+                <Button type="button" variant="outline" size="sm" onClick={handleTestEmail} disabled={emailTesting} className="text-xs h-7">
                   {emailTesting ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
                   <span>{t('settings.emailTest')}</span>
                 </Button>
                 {emailTestResult && (
                   <span className="text-xs text-neutral-600 truncate max-w-xs">{emailTestResult}</span>
+                )}
+                {authNotice && (
+                  <span className={`text-xs font-medium ${authNotice.includes('failed') ? 'text-red-600' : 'text-emerald-700'}`}>
+                    {authNotice}
+                  </span>
                 )}
               </div>
 
