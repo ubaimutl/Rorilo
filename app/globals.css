@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Quattrocento Sans", var(--font-body-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
-  --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: var(--font-varela-round), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,124 +49,291 @@
 }
 
 :root {
-  --background: oklch(0.935 0.018 265);
-  --foreground: oklch(0.145 0 0);
+  color-scheme: light;
+  --background: oklch(0.955 0.005 260);
+  --foreground: oklch(0.22 0.01 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.22 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.22 0.01 260);
+  --primary: oklch(0.22 0.01 260);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.955 0.012 265);
-  --muted-foreground: oklch(0.52 0.03 265);
-  --accent: oklch(0.92 0.04 270);
-  --accent-foreground: oklch(0.35 0.08 270);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.87 0.02 265);
-  --input: oklch(0.84 0.015 265);
-  --ring: oklch(0.65 0.12 270);
+  --secondary: oklch(0.93 0.006 260);
+  --secondary-foreground: oklch(0.3 0.015 260);
+  --muted: oklch(0.93 0.006 260);
+  --muted-foreground: oklch(0.5 0.015 260);
+  --accent: oklch(0.92 0.05 265);
+  --accent-foreground: oklch(0.42 0.2 265);
+  --destructive: oklch(0.55 0.22 25);
+  --border: oklch(0.9 0.008 260);
+  --input: oklch(0.88 0.008 260);
+  --ring: oklch(0.5 0.22 265);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 1rem;
-  --sidebar: oklch(0.9 0.025 265);
-  --sidebar-foreground: oklch(0.38 0.02 265);
-  --sidebar-primary: oklch(0.25 0.01 265);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(1 0 0);
-  --sidebar-accent-foreground: oklch(0.25 0.01 265);
-  --sidebar-border: oklch(0.85 0.02 265);
-  --sidebar-ring: oklch(0.65 0.12 270);
+  --radius: 1.25rem;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.45 0.015 260);
+  --sidebar-primary: oklch(0.22 0.01 260);
+  --sidebar-primary-foreground: oklch(0.22 0.01 260);
+  --sidebar-accent: oklch(0.945 0.005 260);
+  --sidebar-accent-foreground: oklch(0.22 0.01 260);
+  --sidebar-border: oklch(0.9 0.008 260);
+  --sidebar-ring: oklch(0.5 0.22 265);
 }
 
 .dark {
-  --background: oklch(0.334 0.011 84.6);
-  --foreground: oklch(0.899 0.026 94.8);
-  --card: oklch(0.361 0.012 87.6);
-  --card-foreground: oklch(0.899 0.026 94.8);
-  --popover: oklch(0.361 0.012 87.6);
-  --popover-foreground: oklch(0.899 0.026 94.8);
-  --primary: oklch(0.813 0.038 95.1);
-  --primary-foreground: oklch(0.334 0.011 84.6);
-  --secondary: oklch(0.414 0.014 84.6);
-  --secondary-foreground: oklch(0.899 0.026 94.8);
-  --muted: oklch(0.414 0.014 84.6);
-  --muted-foreground: oklch(0.76 0.02 92);
-  --accent: oklch(0.414 0.014 84.6);
-  --accent-foreground: oklch(0.899 0.026 94.8);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.52 0.015 85);
-  --input: oklch(0.436 0.017 88.8);
-  --ring: oklch(0.565 0.023 94.7);
+  color-scheme: dark;
+  --background: oklch(0.19 0.012 260);
+  --foreground: oklch(0.93 0.008 260);
+  --card: oklch(0.24 0.014 260);
+  --card-foreground: oklch(0.93 0.008 260);
+  --popover: oklch(0.24 0.014 260);
+  --popover-foreground: oklch(0.93 0.008 260);
+  --primary: oklch(0.93 0.008 260);
+  --primary-foreground: oklch(0.19 0.012 260);
+  --secondary: oklch(0.3 0.014 260);
+  --secondary-foreground: oklch(0.93 0.008 260);
+  --muted: oklch(0.3 0.014 260);
+  --muted-foreground: oklch(0.7 0.012 260);
+  --accent: oklch(0.35 0.12 265);
+  --accent-foreground: oklch(0.9 0.05 265);
+  --destructive: oklch(0.68 0.18 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.68 0.16 265);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.315 0.010 80.7);
-  --sidebar-foreground: oklch(0.899 0.026 94.8);
-  --sidebar-primary: oklch(0.813 0.038 95.1);
-  --sidebar-primary-foreground: oklch(0.334 0.011 84.6);
-  --sidebar-accent: oklch(0.377 0.013 81.7);
-  --sidebar-accent-foreground: oklch(0.899 0.026 94.8);
-  --sidebar-border: oklch(0.52 0.015 85);
-  --sidebar-ring: oklch(0.565 0.023 94.7);
+  --sidebar: oklch(0.215 0.013 260);
+  --sidebar-foreground: oklch(0.72 0.012 260);
+  --sidebar-primary: oklch(0.93 0.008 260);
+  --sidebar-primary-foreground: oklch(0.93 0.008 260);
+  --sidebar-accent: oklch(1 0 0 / 7%);
+  --sidebar-accent-foreground: oklch(0.95 0.008 260);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.68 0.16 265);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  ::selection {
-    background-color: oklch(0.813 0.038 95.1);
-    color: oklch(0.334 0.011 84.6);
-  }
-  .dark ::selection {
-    background-color: oklch(0.813 0.038 95.1);
-    color: oklch(0.334 0.011 84.6);
+  html {
+    @apply font-sans;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(59, 91, 253, 0.15);
+    scroll-padding-top: 4.5rem;
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
   }
-  html {
-    @apply font-sans;
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  ::selection {
+    background-color: oklch(0.5 0.22 265);
+    color: white;
+  }
+  .dark ::selection {
+    background-color: oklch(0.68 0.16 265);
+    color: oklch(0.19 0.012 260);
   }
   select {
     color-scheme: light;
-    outline: none;
-    box-shadow: none;
   }
-  select:focus,
-  select:focus-visible {
-    outline: none;
-    box-shadow: none;
+  input, textarea, select {
+    font: inherit;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Headings used as anchors never hide under the sticky header */
+  h1[id], h2[id], h3[id] {
+    scroll-margin-top: 5rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
 @layer base {
-  .dark body {
-    color-scheme: dark;
-  }
-
   .dark select {
     color-scheme: dark;
-  }
-
-  .dark input,
-  .dark textarea,
-  .dark select {
-    background-color: oklch(0.24 0 0);
-    color: oklch(0.93 0 0);
-    border-color: oklch(1 0 0 / 14%);
   }
 
   .dark input::placeholder,
   .dark textarea::placeholder {
-    color: oklch(0.62 0 0);
+    color: oklch(0.62 0.02 260);
+  }
+}
+
+@layer utilities {
+  /* Long job lists render offscreen rows lazily without JS measurement */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 240px;
+  }
+  /* Dialogs, drawers and modals trap scroll inside themselves */
+  [data-slot="dialog-content"],
+  [data-slot="sheet-content"] {
+    overscroll-behavior: contain;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer components {
+  .job-description-text,
+  .job-rich-text {
+    max-width: 42rem;
+    color: var(--foreground);
+    flex-direction: column;
+    gap: 1.18rem;
+    display: flex;
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .job-description-text,
+    .job-rich-text {
+      color: color-mix(in srgb, var(--foreground) 78%, var(--background));
+    }
+  }
+  .job-description-text,
+  .job-rich-text {
+    font-size: 1.009rem;
+    line-height: 1.48;
+  }
+  .job-description-text :where(h1, h2, h3, h4, h5, h6),
+  .job-rich-text h2,
+  .job-rich-text h3,
+  .job-rich-text h4 {
+    font-family: var(--font-body-sans), ui-sans-serif, system-ui, sans-serif;
+    color: var(--foreground);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    font-weight: 500;
+    line-height: 1.12;
+  }
+  .job-description-text :where(h1, h2),
+  .job-rich-text h2 {
+    margin: 2.45rem 0 0.15rem;
+    font-size: clamp(1.5rem, 1.22rem + 0.9vw, 1.9rem);
+  }
+  .job-description-text :where(h3),
+  .job-rich-text h3 {
+    margin: 2.1rem 0 0.05rem;
+    font-size: clamp(1.28rem, 1.1rem + 0.58vw, 1.52rem);
+  }
+  .job-description-text :where(h4, h5, h6),
+  .job-rich-text h4 {
+    margin: 1.55rem 0 0;
+    font-size: clamp(1.1rem, 1rem + 0.3vw, 1.22rem);
+  }
+  .job-description-text > :where(h1, h2, h3, h4, h5, h6):first-child,
+  .job-rich-text > :where(h2, h3, h4):first-child {
+    margin-top: 0;
+  }
+  .job-description-text :where(p),
+  .job-rich-text p {
+    color: var(--foreground);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .job-description-text :where(p),
+    .job-rich-text p {
+      color: color-mix(in srgb, var(--foreground) 82%, var(--background));
+    }
+  }
+  .job-description-text :where(p),
+  .job-rich-text p {
+    font-size: inherit;
+    overflow-wrap: anywhere;
+    margin: 0;
+    line-height: 1.48;
+  }
+  .job-description-text p:empty,
+  .job-rich-text p:empty {
+    display: none;
+  }
+  .job-description-text :where(ul, ol),
+  .job-rich-text ul,
+  .job-rich-text ol {
+    max-width: 42rem;
+    color: var(--foreground);
+    flex-direction: column;
+    gap: 0.62rem;
+    margin: 0;
+    padding-left: 1.35rem;
+    display: flex;
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .job-description-text :where(ul, ol),
+    .job-rich-text ul,
+    .job-rich-text ol {
+      color: color-mix(in srgb, var(--foreground) 80%, var(--background));
+    }
+  }
+  .job-description-text :where(ul, ol),
+  .job-rich-text ul,
+  .job-rich-text ol {
+    font-size: inherit;
+    line-height: 1.48;
+  }
+  .job-description-text :where(li),
+  .job-rich-text li {
+    overflow-wrap: anywhere;
+    padding-left: 0.2rem;
+    line-height: 1.48;
+  }
+  .job-description-text :where(ul) {
+    list-style: outside;
+  }
+  .job-description-text :where(ol) {
+    list-style: decimal;
+  }
+  .job-description-text :where(li)::marker {
+    color: var(--foreground);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .job-description-text :where(li)::marker {
+      color: color-mix(in srgb, var(--foreground) 45%, transparent);
+    }
+  }
+  .job-description-text :where(a),
+  .job-rich-text a {
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    -webkit-text-decoration-color: var(--foreground);
+    text-decoration-color: var(--foreground);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    .job-description-text :where(a),
+    .job-rich-text a {
+      -webkit-text-decoration-color: color-mix(in srgb, var(--foreground) 24%, transparent);
+      text-decoration-color: color-mix(in srgb, var(--foreground) 24%, transparent);
+    }
+  }
+  .job-description-text :where(a),
+  .job-rich-text a {
+    text-underline-offset: 0.2rem;
+  }
+  .job-description-text :where(strong, b),
+  .job-rich-text strong,
+  .job-rich-text b {
+    color: var(--foreground);
+    font-weight: 600;
   }
 }
 

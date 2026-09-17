@@ -14,12 +14,13 @@ import { CompanyLogo } from '@/components/CompanyLogo';
 import { useI18n } from '@/components/I18nProvider';
 import { downloadTrackerApplicationsPdf } from '@/lib/pdf/generatePdf';
 import { notify } from '@/components/AppNotifications';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 const COLUMNS = [
-  { id: 'APPLIED', labelKey: 'tracker.colApplied' as const, dot: 'bg-indigo-500' },
+  { id: 'APPLIED', labelKey: 'tracker.colApplied' as const, dot: 'bg-primary' },
   { id: 'INTERVIEW', labelKey: 'tracker.colInterview' as const, dot: 'bg-amber-500' },
   { id: 'OFFER', labelKey: 'tracker.colOffer' as const, dot: 'bg-emerald-500' },
-  { id: 'REJECTED', labelKey: 'tracker.colRejected' as const, dot: 'bg-neutral-300' },
+  { id: 'REJECTED', labelKey: 'tracker.colRejected' as const, dot: 'bg-muted-foreground/40' },
 ];
 
 const ORDERED_STATUSES = ['APPLIED', 'INTERVIEW', 'OFFER', 'REJECTED'];
@@ -33,6 +34,7 @@ export default function ApplicationsPage() {
   const [dropStatus, setDropStatus] = useState<string | null>(null);
   const [exportFrom, setExportFrom] = useState('');
   const [exportTo, setExportTo] = useState('');
+  const confirm = useConfirm();
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -72,7 +74,12 @@ export default function ApplicationsPage() {
   };
 
   const handleDeleteJob = async (jobId: string) => {
-    if (!confirm(t('common.confirmDelete' as any) || 'Are you sure you want to delete this job?')) return;
+    const ok = await confirm({
+      title: t('common.confirmDelete' as any) || 'Delete this job?',
+      confirmLabel: t('common.delete' as any) || 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete job');
@@ -178,7 +185,7 @@ export default function ApplicationsPage() {
         title={t('tracker.title')}
         description={t('tracker.description')}
         badge={
-          <span className="text-xs text-neutral-500 font-semibold bg-neutral-200/70 px-2.5 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-primary">
             {t('tracker.tracked', { count: applications.length })}
           </span>
         }
@@ -186,33 +193,37 @@ export default function ApplicationsPage() {
           <div className="flex flex-wrap items-center justify-end gap-2">
             {applications.length > 0 && (
               <Button onClick={handleExportPdf} variant="outline" size="sm" className="h-9 text-sm">
-                <Download className="size-4" />
+                <Download className="size-4" aria-hidden="true" />
                 <span>{t('tracker.exportPdf')}</span>
               </Button>
             )}
-            <div className="flex items-center gap-0.5 border border-neutral-200 rounded-lg p-1 bg-white">
+            <div className="flex items-center gap-0.5 border border-border rounded-xl p-1 bg-card" role="group" aria-label="View mode">
               <button
+                type="button"
                 onClick={() => setViewMode('kanban')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                aria-pressed={viewMode === 'kanban'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                   viewMode === 'kanban'
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title={t('tracker.board')}
               >
-                <LayoutGrid className="size-4" />
+                <LayoutGrid className="size-4" aria-hidden="true" />
                 <span>{t('tracker.board')}</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                aria-pressed={viewMode === 'list'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                   viewMode === 'list'
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title={t('tracker.list')}
               >
-                <List className="size-4" />
+                <List className="size-4" aria-hidden="true" />
                 <span>{t('tracker.list')}</span>
               </button>
             </div>
@@ -220,30 +231,30 @@ export default function ApplicationsPage() {
         }
       />
 
-      <main className="p-6 md:p-8 flex-1 overflow-x-auto">
+      <main className="px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex-1 overflow-x-auto motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150">
         {!loading && applications.length > 0 && (
-          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-4 flex flex-col gap-2 rounded-xl border border-border bg-card px-3 py-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-neutral-900">{t('tracker.exportRange')}</p>
-              <p className="text-xs text-neutral-500">{t('tracker.exportRangeHint')}</p>
+              <p className="text-sm font-semibold text-foreground">{t('tracker.exportRange')}</p>
+              <p className="text-xs text-muted-foreground">{t('tracker.exportRangeHint')}</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex items-center gap-2 text-xs font-medium text-neutral-600">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <span>{t('tracker.exportFrom')}</span>
                 <input
                   type="date"
                   value={exportFrom}
                   onChange={(event) => setExportFrom(event.target.value)}
-                  className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm text-neutral-900 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
               </label>
-              <label className="flex items-center gap-2 text-xs font-medium text-neutral-600">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <span>{t('tracker.exportTo')}</span>
                 <input
                   type="date"
                   value={exportTo}
                   onChange={(event) => setExportTo(event.target.value)}
-                  className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm text-neutral-900 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
               </label>
             </div>
@@ -252,7 +263,7 @@ export default function ApplicationsPage() {
         {loading ? (
           <div className="flex flex-col md:flex-row gap-4 items-stretch min-w-[950px] pb-10" aria-label={t('tracker.loading')}>
             {[0, 1, 2, 3].map((col) => (
-              <div key={col} className="bg-neutral-50/70 border border-neutral-200 rounded-xl p-3 flex flex-col gap-2.5 flex-1">
+              <div key={col} className="bg-muted/40 border border-border rounded-2xl p-3 flex flex-col gap-2.5 flex-1">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-24 w-full" />
                 <Skeleton className="h-24 w-full" />
@@ -298,17 +309,17 @@ export default function ApplicationsPage() {
                   }}
                   onDragLeave={() => setDropStatus((current) => current === col.id ? null : current)}
                   onDrop={() => handleDropOnStatus(col.id)}
-                  className={`bg-neutral-50/70 border rounded-xl p-3 flex flex-col min-h-[220px] flex-1 transition-colors ${
+                  className={`bg-muted/40 border rounded-2xl p-3 flex flex-col min-h-[220px] flex-1 motion-safe:transition-colors motion-safe:duration-150 ${
                     dropStatus === col.id
-                      ? 'border-neutral-500 bg-neutral-100'
-                      : 'border-neutral-200'
+                      ? 'border-primary/50 bg-primary/[0.05] ring-1 ring-primary/20'
+                      : 'border-border'
                   }`}
                 >
                   {/* Column Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-200/80 mb-3 px-1 shrink-0">
+                  <div className="flex items-center justify-between pb-3 border-b border-border/70 mb-3 px-1 shrink-0">
                     <div className="flex items-center gap-2">
                       <span className={`size-2 rounded-full ${col.dot}`} aria-hidden="true" />
-                      <span className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">
                         {t(col.labelKey)}
                       </span>
                       <Badge variant="secondary" className="tabular-nums">
@@ -332,7 +343,7 @@ export default function ApplicationsPage() {
                           setDraggingAppId(null);
                           setDropStatus(null);
                         }}
-                        className={`bg-white border border-neutral-200 rounded-lg p-3.5 shadow-xs hover:border-neutral-300 transition-all space-y-2 group cursor-grab active:cursor-grabbing ${
+                        className={`bg-card border border-border rounded-2xl p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.05)] hover:border-primary/25 hover:shadow-[0_4px_16px_-8px_rgba(36,56,232,0.25)] motion-safe:transition-colors motion-safe:duration-150 space-y-2 group cursor-grab active:cursor-grabbing focus-within:border-primary/40 ${
                           draggingAppId === app.id ? 'opacity-50' : ''
                         }`}
                       >
@@ -342,61 +353,68 @@ export default function ApplicationsPage() {
                               company={app.job.company}
                               website={app.job.companyWebsite}
                               directLogoUrl={app.job.companyLogo}
-                              size={26}
+                              size={28}
                               className="mt-0.5"
                             />
                             <Link
                               href={`/jobs/${app.job.id}`}
-                              className="text-sm font-semibold text-neutral-900 hover:text-indigo-600 transition-colors line-clamp-2 leading-snug"
+                              className="rounded-sm text-sm font-semibold text-foreground hover:text-primary motion-safe:transition-colors line-clamp-2 leading-snug focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                             >
                               {app.job.title}
                             </Link>
                           </div>
-                          <ScoreRing score={displayMatchScore(app.job.match)} size={30} calibrated={isAiCalibrated(app.job.match)} />
+                          <ScoreRing score={displayMatchScore(app.job.match)} size={32} calibrated={isAiCalibrated(app.job.match)} />
                         </div>
 
-                        <p className="text-xs text-neutral-500 font-medium">
+                        <p className="text-xs text-muted-foreground font-medium truncate">
                           {app.job.company}
                         </p>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs text-neutral-400">
+                        <div className="flex items-center justify-between pt-2 border-t border-border/70 text-xs tabular-nums text-muted-foreground">
                           <span>{formatDate(app.updatedAt)}</span>
 
                           {/* Quick advance / regress status buttons */}
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5">
                             {col.id !== 'APPLIED' && (
                               <button
+                                type="button"
                                 onClick={() => moveStatus(app, 'prev')}
-                                className="p-1 rounded text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                aria-label={t('tracker.prev')}
                                 title={t('tracker.prev')}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                               >
-                                <ChevronLeft className="size-3.5" />
+                                <ChevronLeft className="size-3.5" aria-hidden="true" />
                               </button>
                             )}
 
                             {col.id !== 'REJECTED' && col.id !== 'OFFER' && (
                               <button
+                                type="button"
                                 onClick={() => moveStatus(app, 'next')}
-                                className="p-1 rounded text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                                aria-label={t('tracker.next')}
                                 title={t('tracker.next')}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                               >
-                                <ChevronRight className="size-3.5" />
+                                <ChevronRight className="size-3.5" aria-hidden="true" />
                               </button>
                             )}
 
                             <button
+                              type="button"
                               onClick={() => handleDeleteJob(app.job.id)}
-                              className="p-1 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                              aria-label={t('common.delete' as any) || 'Delete'}
                               title={t('common.delete' as any) || 'Delete'}
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                             >
-                              <Trash2 className="size-3.5" />
+                              <Trash2 className="size-3.5" aria-hidden="true" />
                             </button>
                             <Link
                               href={`/jobs/${app.job.id}`}
-                              className="p-1 rounded text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
+                              aria-label={t('tracker.openDetails')}
                               title={t('tracker.openDetails')}
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
                             >
-                              <ArrowRight className="size-3.5" />
+                              <ArrowRight className="size-3.5" aria-hidden="true" />
                             </Link>
                           </div>
                         </div>
@@ -404,7 +422,7 @@ export default function ApplicationsPage() {
                     ))}
 
                     {colApps.length === 0 && (
-                      <div className="h-28 border border-dashed border-neutral-200 rounded-lg flex items-center justify-center text-xs text-neutral-400">
+                      <div className="h-28 border border-dashed border-border rounded-2xl flex items-center justify-center text-xs text-muted-foreground">
                         {t('tracker.emptyCol')}
                       </div>
                     )}
@@ -416,45 +434,45 @@ export default function ApplicationsPage() {
         ) : (
           /* List Table View */
           <div className="max-w-4xl mx-auto w-full">
-            <div className="hidden sm:grid sm:grid-cols-12 gap-4 pb-3 border-b border-neutral-200 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+            <div className="hidden sm:grid sm:grid-cols-12 gap-4 pb-3 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               <div className="col-span-5">{t('tracker.colRole')}</div>
               <div className="col-span-3">{t('tracker.colCompany')}</div>
               <div className="col-span-2">{t('tracker.colDate')}</div>
               <div className="col-span-2 text-right">{t('tracker.colStatus')}</div>
             </div>
 
-            <div className="divide-y divide-neutral-100">
+            <div className="divide-y divide-border/70">
               {applications.map((app) => (
                 <div
                   key={app.id}
-                  className="py-4 sm:grid sm:grid-cols-12 gap-4 items-center hover:bg-neutral-50/60 -mx-2 px-2 rounded-lg transition-colors group"
+                  className="py-4 sm:grid sm:grid-cols-12 gap-4 items-center hover:bg-muted/40 -mx-2 px-2 rounded-lg motion-safe:transition-colors group"
                 >
                   <div className="col-span-5 min-w-0">
                     <Link
                       href={`/jobs/${app.job.id}`}
-                      className="text-sm font-semibold text-neutral-900 group-hover:text-neutral-700 hover:underline block truncate tracking-tight"
+                      className="text-sm font-semibold text-foreground group-hover:text-primary hover:underline block truncate tracking-tight rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     >
                       {app.job.title}
                     </Link>
-                    <p className="text-xs text-neutral-500 sm:hidden mt-0.5">
+                    <p className="text-xs tabular-nums text-muted-foreground sm:hidden mt-0.5">
                       {app.job.company} · {formatDate(app.updatedAt)}
                     </p>
                   </div>
 
-                  <div className="hidden sm:block col-span-3 text-sm text-neutral-600 truncate">
+                  <div className="hidden sm:block col-span-3 text-sm text-muted-foreground truncate">
                     {app.job.company}
                   </div>
 
-                  <div className="hidden sm:block col-span-2 text-sm text-neutral-400">
+                  <div className="hidden sm:block col-span-2 text-sm tabular-nums text-muted-foreground">
                     {formatDate(app.updatedAt)}
                   </div>
 
-                  <div className="col-span-2 flex items-center justify-between sm:justify-end gap-2 mt-2 sm:mt-0">
+                  <div className="col-span-2 flex items-center justify-between sm:justify-end gap-1 mt-2 sm:mt-0">
                     <select
                       value={app.status}
                       onChange={(e) => handleStatusChange(app.id, app.job.id, e.target.value)}
                       aria-label={t('tracker.statusAria')}
-                      className="h-8 rounded-md border border-input bg-transparent px-2.5 py-1 text-xs text-neutral-800 font-semibold outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer"
+                      className="h-8 rounded-md border border-input bg-transparent px-2.5 py-1 text-xs text-foreground font-semibold outline-none motion-safe:transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 cursor-pointer touch-manipulation"
                     >
                       {COLUMNS.map((col) => (
                         <option key={col.id} value={col.id}>
@@ -464,18 +482,21 @@ export default function ApplicationsPage() {
                     </select>
 
                     <button
+                      type="button"
                       onClick={() => handleDeleteJob(app.job.id)}
-                      className="text-neutral-400 hover:text-red-600 p-1 transition-colors cursor-pointer"
+                      aria-label={t('common.delete' as any) || 'Delete'}
                       title={t('common.delete' as any) || 'Delete'}
+                      className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/10 motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     >
-                      <Trash2 className="size-4" />
+                      <Trash2 className="size-4" aria-hidden="true" />
                     </button>
                     <Link
                       href={`/jobs/${app.job.id}`}
-                      className="text-neutral-400 hover:text-neutral-900 p-1 transition-colors"
+                      aria-label={t('tracker.viewApp')}
                       title={t('tracker.viewApp')}
+                      className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
                     >
-                      <ArrowRight className="size-4" />
+                      <ArrowRight className="size-4" aria-hidden="true" />
                     </Link>
                   </div>
                 </div>

@@ -135,10 +135,10 @@ export default function JobDetailPage() {
         await fetchJob();
         setIsSheetOpen(true);
       } else {
-        alert(data.error || t('jobdetail.prepareFailed'));
+        notify({ title: data.error || t('jobdetail.prepareFailed'), type: 'error' });
       }
     } catch (err) {
-      alert((err as Error).message);
+      notify({ title: (err as Error).message, type: 'error' });
     } finally {
       setPreparing(false);
     }
@@ -416,6 +416,7 @@ export default function JobDetailPage() {
 
   const strongMatches: string[] = match?.strongMatches ? JSON.parse(match.strongMatches) : [];
   const possibleIssues: string[] = match?.possibleIssues ? JSON.parse(match.possibleIssues) : [];
+  const missingSkills: string[] = match?.missingSkills ? JSON.parse(match.missingSkills) : [];
 
   const isEmailMethod = Boolean(job.contactEmail);
   const isPrepared = Boolean(coverLetterContent || emailBody);
@@ -455,15 +456,15 @@ export default function JobDetailPage() {
             {isPrepared && (
               <Link
                 href="/prepared"
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors hidden sm:inline-block"
+                className="h-10 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90 motion-safe:transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation hidden sm:inline-flex"
               >
-                {t('material.openInDrafts')} →
+                {t('material.openInDrafts')}
               </Link>
             )}
 
             <Link
               href={companyHref(job.company)}
-              className="text-sm font-medium text-neutral-600 hover:text-neutral-900 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white transition-colors hidden sm:inline-block"
+              className="h-10 inline-flex items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-muted-foreground hover:text-foreground motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation hidden sm:inline-flex"
             >
               {t('jobdetail.company')}
             </Link>
@@ -472,7 +473,7 @@ export default function JobDetailPage() {
               value={job.application?.status || 'NEW'}
               onChange={(e) => handleStatusChange(e.target.value)}
               aria-label={t('tracker.statusAria')}
-              className="h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm font-semibold text-neutral-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 cursor-pointer"
+              className="h-10 rounded-full border border-border bg-card px-4 text-sm font-semibold cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <option value="NEW">{t('jobdetail.unapplied')}</option>
               <option value="SAVED">{t('discover.tabs.saved')}</option>
@@ -486,7 +487,7 @@ export default function JobDetailPage() {
         }
       />
 
-      <main className="p-6 md:p-10 max-w-5xl w-full mx-auto">
+      <main className="px-4 sm:px-6 lg:px-8 py-6 md:py-8 max-w-5xl w-full mx-auto motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           {/* Main Column: Clean Reading Document (2 Cols) */}
           <div className="lg:col-span-2 space-y-6">
@@ -576,60 +577,69 @@ export default function JobDetailPage() {
 
           {/* Right Action & Fit Summary Column */}
           <aside className="flex flex-col gap-4 lg:sticky lg:top-24">
-            <Card>
-              <CardContent className="flex flex-col gap-4">
-                {match ? (
-                  <div className="flex items-center gap-4">
-                    <ScoreRing score={score} size={68} calibrated={calibrated} />
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-900">{t('drafts.overall')}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                        {t('drafts.deterministic')}
-                      </p>
-                    </div>
+            <section className="rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]">
+              {match ? (
+                <div className="flex items-center gap-4">
+                  <ScoreRing score={score} size={72} calibrated={calibrated} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('drafts.overall')}</p>
+                    <p className="mt-1 text-3xl font-bold tabular-nums leading-none tracking-tight">{score}<span className="text-lg font-semibold text-muted-foreground">%</span></p>
                   </div>
-                ) : (
-                  <Alert>
-                    <TriangleAlert />
-                    <AlertDescription>{t('jobdetail.profileNeeded')}</AlertDescription>
-                  </Alert>
-                )}
+                </div>
+              ) : (
+                <Alert>
+                  <TriangleAlert />
+                  <AlertDescription>{t('jobdetail.profileNeeded')}</AlertDescription>
+                </Alert>
+              )}
 
-                {match?.aiInterpretation && (
-                  <p className="text-sm text-neutral-600 leading-relaxed">
-                    {match.aiInterpretation}
-                  </p>
-                )}
+              {match?.aiInterpretation && (
+                <p className="mt-4 text-sm text-muted-foreground leading-relaxed text-pretty">
+                  {match.aiInterpretation}
+                </p>
+              )}
 
-                {strongMatches.length > 0 && (
-                  <div className="flex flex-col gap-1 text-sm pt-1">
-                    <h3 className="font-semibold text-neutral-900">{t('jobdetail.why')}</h3>
-                    <ul className="flex flex-col gap-1 text-neutral-600">
-                      {strongMatches.slice(0, 4).map((m, i) => (
-                        <li key={i} className="flex items-start gap-1.5">
-                          <span className="text-neutral-400">•</span>
-                          <span>{m}</span>
-                        </li>
-                      ))}
-                    </ul>
+              {strongMatches.length > 0 && (
+                <div className="mt-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('jobdetail.why')}</h3>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    {strongMatches.slice(0, 6).map((m, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 h-8 text-[13px] font-medium text-primary-foreground">
+                        <Check className="size-3.5" aria-hidden="true" />
+                        {m}
+                      </span>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {possibleIssues.length > 0 && (
-                  <div className="flex flex-col gap-1 text-sm pt-1">
-                    <h3 className="font-semibold text-neutral-900">{t('jobdetail.issues')}</h3>
-                    <ul className="flex flex-col gap-1 text-neutral-600">
-                      {possibleIssues.slice(0, 3).map((issue, i) => (
-                        <li key={i} className="flex items-start gap-1.5">
-                          <span className="text-neutral-400">•</span>
-                          <span>{issue}</span>
-                        </li>
-                      ))}
-                    </ul>
+              {missingSkills.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('jobcard.missing')}</h3>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    {missingSkills.slice(0, 6).map((m, i) => (
+                      <span key={i} className="inline-flex items-center rounded-full border border-border px-3 h-8 text-[13px] font-medium text-muted-foreground">
+                        {m}
+                      </span>
+                    ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              )}
+
+              {possibleIssues.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('jobdetail.issues')}</h3>
+                  <ul className="mt-2 flex flex-col gap-1.5 text-sm text-muted-foreground">
+                    {possibleIssues.slice(0, 3).map((issue, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <TriangleAlert className="size-3.5 shrink-0 mt-0.5 text-amber-600" aria-hidden="true" />
+                        <span>{issue}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
 
             {scoreBreakdown.length > 0 && (
               <Card>
@@ -692,16 +702,17 @@ export default function JobDetailPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="space-y-2.5">
+            <div className="flex flex-col gap-2 rounded-3xl border border-border bg-card p-3 shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]">
               <Button
                 onClick={isPrepared ? () => setIsSheetOpen(true) : handlePrepare}
                 disabled={preparing}
-                className="w-full text-sm font-semibold h-10"
+                size="lg"
+                className="w-full"
               >
                 {preparing ? (
-                  <Loader2 className="size-4 animate-spin mr-2" />
+                  <Loader2 className="size-4 animate-spin mr-2" aria-hidden="true" />
                 ) : (
-                  <Sparkles className="size-4 mr-2" />
+                  <Sparkles className="size-4 mr-2" aria-hidden="true" />
                 )}
                 <span>
                   {preparing
@@ -717,8 +728,7 @@ export default function JobDetailPage() {
                   onClick={handlePrepare}
                   disabled={preparing}
                   variant="outline"
-                  size="sm"
-                  className="w-full text-xs h-8 text-neutral-500"
+                  className="w-full"
                 >
                   {t('material.regenerate')}
                 </Button>

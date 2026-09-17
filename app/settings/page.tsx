@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, Plus, Trash2, Mail, ChevronDown, ChevronUp, CheckCircle2, ExternalLink, X, Info, Download, Upload, Database } from 'lucide-react';
+import { Loader2, Plus, Trash2, Mail, ChevronDown, ChevronUp, CheckCircle2, ExternalLink, X, Info, Download, Upload, Database, Cpu, Cloud, Globe, Image as ImageIcon } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { PageHeader } from '@/components/PageHeader';
-import { Card, CardContent } from '@/components/ui/card';
+import { SectionCard } from '@/components/SectionCard';
 import { SecretInput } from '@/components/SecretInput';
 import { ModelPicker } from '@/components/ModelPicker';
 import { CompanyLogo } from '@/components/CompanyLogo';
@@ -17,6 +16,7 @@ import { KNOWN_JOB_SOURCES, orderApifyPicker } from '@/lib/job-sources/sources';
 import { sourceCoverageGroupTitle, sourceCoverageLabel, sourceCoveragePriority } from '@/lib/job-sources/countries';
 import { richText, useI18n } from '@/components/I18nProvider';
 import { notify } from '@/components/AppNotifications';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 const BOARD_PROVIDER_OPTIONS = [
   { value: 'greenhouse', label: 'Greenhouse' },
@@ -44,6 +44,7 @@ type FallbackProviderForm = {
 
 export default function SettingsPage() {
   const { t } = useI18n();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
 
   // AI State
@@ -569,9 +570,11 @@ export default function SettingsPage() {
 
   const handleImportBackup = async (file: File | null) => {
     if (!file) return;
-    const shouldImport = window.confirm(
-      t('settings.backupImportConfirm')
-    );
+    const shouldImport = await confirm({
+      title: t('settings.backupImportConfirm'),
+      confirmLabel: t('settings.backupImport'),
+      tone: 'danger',
+    });
     if (!shouldImport) return;
 
     setBackupImporting(true);
@@ -613,18 +616,10 @@ export default function SettingsPage() {
         description={t('settings.description')}
       />
 
-      <main className="p-6 md:p-8 max-w-2xl w-full mx-auto space-y-10">
+      <main className="px-4 sm:px-6 lg:px-8 py-6 md:py-8 max-w-3xl w-full mx-auto space-y-6 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150">
         {/* 1. AI Provider */}
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              {t('settings.aiTitle')}
-            </h2>
-            <p className="text-sm text-neutral-500 mt-1">
-              {t('settings.aiDescription')}
-            </p>
-          </div>
+        <SectionCard icon={<Cpu className="size-[18px]" aria-hidden="true" />} title={t('settings.aiTitle')} description={t('settings.aiDescription')}>
+          <div className="flex flex-col gap-4">
 
           <form onSubmit={handleSaveAI} className="flex flex-col gap-4" autoComplete="off">
             <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-3">
@@ -887,26 +882,12 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
-        </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
 
-        <Separator />
 
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                <Database className="size-4" />
-              </span>
-              <div>
-                <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-                  {t('settings.backupTitle')}
-                </h2>
-                <p className="mt-1 text-sm text-neutral-500">
-                  {t('settings.backupDescription')}
-                </p>
-              </div>
-            </div>
+        <SectionCard icon={<Database className="size-[18px]" aria-hidden="true" />} title={t('settings.backupTitle')} description={t('settings.backupDescription')}>
+          <div className="flex flex-col gap-4">
 
             <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs leading-relaxed text-neutral-600">
@@ -946,22 +927,13 @@ export default function SettingsPage() {
               </div>
             </div>
             {backupResult && <p className="text-xs text-neutral-600">{backupResult}</p>}
-          </CardContent>
-        </Card>
+            </div>
+        </SectionCard>
 
-        <Separator />
 
         {/* 2. Job Discovery (Apify) */}
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              {t('settings.apifyTitle')}
-            </h2>
-            <p className="text-sm text-neutral-500 mt-1">
-              {t('settings.apifyDescription')}
-            </p>
-          </div>
+        <SectionCard icon={<Cloud className="size-[18px]" aria-hidden="true" />} title={t('settings.apifyTitle')} description={t('settings.apifyDescription')}>
+          <div className="flex flex-col gap-4">
 
           <form onSubmit={handleSaveApify} className="space-y-3.5" autoComplete="off">
             <div className="space-y-3">
@@ -1177,22 +1149,13 @@ export default function SettingsPage() {
               </div>
             </div>
           </form>
-        </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
 
-        <Separator />
 
         {/* 3. Free Sources */}
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              {t('settings.freeTitle')}
-            </h2>
-            <p className="text-sm text-neutral-500 mt-1">
-              {t('settings.freeDescription')}
-            </p>
-          </div>
+        <SectionCard icon={<Globe className="size-[18px]" aria-hidden="true" />} title={t('settings.freeTitle')} description={t('settings.freeDescription')}>
+          <div className="flex flex-col gap-4">
 
           <form onSubmit={handleSaveFree} className="flex flex-col gap-4" autoComplete="off">
             <div className="flex flex-col gap-2">
@@ -1401,20 +1364,12 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
-        </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
 
         {/* 4. Email Dispatch */}
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              {t('settings.emailTitle')}
-            </h2>
-            <p className="text-sm text-neutral-500 mt-1">
-              {t('settings.emailDescription')}
-            </p>
-          </div>
+        <SectionCard icon={<Mail className="size-[18px]" aria-hidden="true" />} title={t('settings.emailTitle')} description={t('settings.emailDescription')}>
+          <div className="flex flex-col gap-4">
 
           {/* Zero Config Helper Banner */}
           <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-900 flex items-start gap-2.5">
@@ -1502,29 +1457,12 @@ export default function SettingsPage() {
               </div>
             </div>
           </form>
-        </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
 
         {/* 5. Company Logos */}
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-neutral-900 tracking-tight">
-              {t('settings.logoTitle')}
-            </h2>
-            <p className="text-sm text-neutral-500 mt-1">
-              {t('settings.logoDescription')}
-            </p>
-            <a
-              href="https://www.logo.dev/dashboard/api-keys"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-950 hover:underline"
-            >
-              <span>{t('settings.logoOpenDashboard')}</span>
-              <ExternalLink className="size-3.5" />
-            </a>
-          </div>
+        <SectionCard icon={<ImageIcon className="size-[18px]" aria-hidden="true" />} title={t('settings.logoTitle')} description={t('settings.logoDescription')} action={<a href="https://www.logo.dev/dashboard/api-keys" target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/25 motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"><span>{t('settings.logoOpenDashboard')}</span><ExternalLink className="size-3.5" aria-hidden="true" /></a>}>
+          <div className="flex flex-col gap-4">
 
           <form onSubmit={handleSaveLogo} className="flex flex-col gap-3.5" autoComplete="off">
             <SecretInput
@@ -1567,8 +1505,8 @@ export default function SettingsPage() {
               </div>
             </div>
           </form>
-        </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
 
       </main>
     </div>

@@ -2,14 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Loader2, Upload, FileText, Check, ChevronDown, ChevronUp, ClipboardPaste } from "lucide-react";
+import { Loader2, Upload, FileText, Check, ChevronDown, ChevronUp, ClipboardPaste, User, Briefcase, Target, PenLine, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/SectionCard";
 import { formatDate } from "@/lib/utils";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -30,6 +29,7 @@ export default function ProfilePage() {
 
   // Active CV record
   const [activeCv, setActiveCv] = useState<{
+    id: string;
     originalFilename: string;
     uploadDate: string;
     extractedText?: string;
@@ -335,31 +335,62 @@ export default function ProfilePage() {
       <PageHeader
         title={t('profile.title')}
         description={t('profile.description')}
-        actions={
-          saveStatus && (
-            <span className="text-sm text-emerald-700 font-medium">{saveStatus}</span>
-          )
-        }
       />
 
-      <main className="p-6 md:p-10 max-w-3xl w-full mx-auto">
-        <form onSubmit={handleSave} className="space-y-10">
+      <main className="px-4 sm:px-6 lg:px-8 py-6 md:py-8 max-w-3xl w-full mx-auto motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150">
+        <form onSubmit={handleSave} className="flex flex-col gap-5">
+          {/* Profile Strength */}
+          {(() => {
+            const checks = [
+              { done: Boolean(activeCv), label: t('profile.cvTitle') },
+              { done: Boolean(profile.firstName.trim() && profile.email.trim()), label: t('profile.personalTitle') },
+              { done: Boolean(profile.currentTitle.trim()), label: t('profile.bgTitle') },
+              { done: Boolean(profile.skillsStr.trim()), label: t('profile.skills') },
+              { done: Boolean(preferences.desiredTitlesStr.trim()), label: t('profile.prefsTitles') },
+              { done: Boolean(profile.city.trim()), label: t('profile.location') },
+              { done: Boolean(preferences.writingStyle.trim()), label: t('profile.writingTitle') },
+            ];
+            const done = checks.filter((c) => c.done).length;
+            const pct = Math.round((done / checks.length) * 100);
+            const missing = checks.filter((c) => !c.done).slice(0, 3);
+            return (
+              <section aria-label={t('profile.strengthTitle')} className="rounded-3xl bg-primary text-primary-foreground p-5 sm:p-6 shadow-[0_16px_48px_-24px_rgba(19,20,23,0.5)]">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider opacity-60">
+                      {t('profile.strengthTitle')}
+                    </p>
+                    <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight leading-none">
+                      {pct}<span className="text-2xl opacity-60">%</span>
+                    </p>
+                  </div>
+                  <div className="hidden sm:block max-w-55 text-[13px] leading-relaxed opacity-70">
+                    {t('profile.strengthDesc')}
+                  </div>
+                </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-primary-foreground/20" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t('profile.strengthTitle')}>
+                  <div className="h-full rounded-full bg-primary-foreground motion-safe:transition-[width] motion-safe:duration-500" style={{ width: `${pct}%` }} />
+                </div>
+                {missing.length > 0 && (
+                  <p className="mt-3 text-[13px] opacity-70">
+                    {t('profile.strengthCta')} <span className="font-semibold opacity-100">{missing.map((m) => m.label).join(' · ')}</span>
+                  </p>
+                )}
+              </section>
+            );
+          })()}
           {/* CV Section */}
-          <Card>
-            <CardContent className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                {t('profile.cvTitle')}
-              </h2>
-              <p className="text-sm text-neutral-500 mt-1">
-                {t('profile.cvDescription')}
-              </p>
-            </div>
+          <SectionCard
+            icon={<FileText className="size-[18px]" aria-hidden="true" />}
+            title={t('profile.cvTitle')}
+            description={t('profile.cvDescription')}
+          >
+            <div className="flex flex-col gap-4">
 
             {/* Current Active CV Status */}
-            <div className="flex items-center justify-between p-3.5 bg-neutral-50/70 border border-neutral-200 rounded-xl">
+            <div className="flex items-center justify-between gap-3 p-3.5 bg-neutral-50/70 border border-neutral-200 rounded-xl">
               <div className="flex items-center gap-3 min-w-0">
-                <FileText className="size-5 text-neutral-500 shrink-0" />
+                <FileText className="size-5 text-neutral-500 shrink-0" aria-hidden="true" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-neutral-900 truncate">
                     {activeCv?.originalFilename || t("profile.cvNoActive")}
@@ -371,9 +402,21 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-              {cvNotice && (
-                <span className="text-xs text-emerald-700 font-medium">{cvNotice}</span>
-              )}
+              <div className="flex shrink-0 items-center gap-2">
+                {cvNotice && (
+                  <span className="text-xs text-emerald-700 font-medium hidden sm:inline" role="status">{cvNotice}</span>
+                )}
+                {activeCv && (
+                  <a
+                    href="/api/cv?download=active"
+                    download
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-[13px] font-semibold hover:border-primary/30 hover:text-primary motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    {t('profile.cvDownload')}
+                  </a>
+                )}
+              </div>
             </div>
 
             {cvSummary.length > 0 && (
@@ -453,27 +496,21 @@ export default function ProfilePage() {
                 <summary className="cursor-pointer font-medium hover:text-neutral-800">
                   {t('profile.cvInspect')}
                 </summary>
-                <div className="mt-2 p-3 bg-neutral-50/70 border border-neutral-200 rounded-lg font-mono text-xs text-neutral-700 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+                <div className="mt-2 p-3 bg-muted/40 border border-border rounded-xl font-mono text-xs text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto overscroll-contain leading-relaxed">
                   {activeCv.extractedText}
                 </div>
               </details>
             )}
-          </CardContent>
-          </Card>
-
-          <Separator />
+            </div>
+          </SectionCard>
 
           {/* Personal Information */}
-          <Card>
-            <CardContent className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                {t('profile.personalTitle')}
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {t('profile.personalHint')}
-              </p>
-            </div>
+          <SectionCard
+            icon={<User className="size-[18px]" aria-hidden="true" />}
+            title={t('profile.personalTitle')}
+            description={t('profile.personalHint')}
+          >
+            <div className="flex flex-col gap-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -575,23 +612,16 @@ export default function ProfilePage() {
                 className="text-sm leading-relaxed"
               />
             </div>
-          </CardContent>
-          </Card>
-
-          <Separator />
+            </div>
+          </SectionCard>
 
           {/* Professional Background */}
-          <Card>
-            <CardContent className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                {t('profile.bgTitle')}
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {t('profile.bgHint')}
-              </p>
-            </div>
-
+          <SectionCard
+            icon={<Briefcase className="size-[18px]" aria-hidden="true" />}
+            title={t('profile.bgTitle')}
+            description={t('profile.bgHint')}
+          >
+            <div className="flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="prof-title" className="text-sm font-medium text-neutral-700">{t('profile.currentTitle')}</Label>
@@ -632,22 +662,16 @@ export default function ProfilePage() {
                 className="text-sm leading-relaxed"
               />
             </div>
-          </CardContent>
-          </Card>
-
-          <Separator />
+            </div>
+          </SectionCard>
 
           {/* Job Preferences */}
-          <Card>
-            <CardContent className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-xs font-semibold text-neutral-900 uppercase tracking-wider">
-                {t('profile.prefsTitle')}
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {t('profile.prefsHint')}
-              </p>
-            </div>
+          <SectionCard
+            icon={<Target className="size-[18px]" aria-hidden="true" />}
+            title={t('profile.prefsTitle')}
+            description={t('profile.prefsHint')}
+          >
+            <div className="flex flex-col gap-4">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -729,22 +753,16 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
-          </CardContent>
-          </Card>
-
-          <Separator />
+            </div>
+          </SectionCard>
 
           {/* Application Writing */}
-          <Card>
-            <CardContent className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-900">
-                {t('profile.writingTitle')}
-              </h2>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {t('profile.writingHint')}
-              </p>
-            </div>
+          <SectionCard
+            icon={<PenLine className="size-[18px]" aria-hidden="true" />}
+            title={t('profile.writingTitle')}
+            description={t('profile.writingHint')}
+          >
+            <div className="flex flex-col gap-4">
 
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="space-y-1.5 flex-1">
@@ -895,15 +913,18 @@ export default function ProfilePage() {
                 className="text-sm leading-relaxed"
               />
             </div>
-          </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
 
           {/* Submit Action */}
-          <div className="pt-4 flex items-center justify-end gap-3">
+          <div className="sticky bottom-20 md:bottom-4 z-10 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-[0_8px_24px_-12px_rgba(16,24,40,0.3)] backdrop-blur-md">
+            <p aria-live="polite" className="min-w-0 truncate text-[13px] font-medium text-emerald-700 dark:text-emerald-300">
+              {saveStatus || ""}
+            </p>
             <Button
               type="submit"
               disabled={saving}
-              className="text-sm h-9 px-5"
+              className="text-sm h-9 px-5 shrink-0"
             >
               {saving ? t("common.saving") : t("profile.saveProfile")}
             </Button>

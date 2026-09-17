@@ -1,231 +1,135 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, Sparkles, Layers, User, Settings, ListChecks, ChevronsLeft, ChevronsRight, Menu, ChevronUp } from 'lucide-react';
+import { Briefcase, Sparkles, Layers, User, Settings, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import { useI18n } from './I18nProvider';
 import type { TranslationKey } from '@/lib/i18n';
 
-const SIDEBAR_COLLAPSED_KEY = 'rorilo-sidebar-collapsed';
-
 const NAV_ITEMS = [
   { href: '/', labelKey: 'nav.discover', icon: Briefcase },
   { href: '/prepared', labelKey: 'nav.drafts', icon: Sparkles },
   { href: '/applications', labelKey: 'nav.tracker', icon: Layers },
   { href: '/profile', labelKey: 'nav.profile', icon: User },
-  { href: '/setup', labelKey: 'nav.setup', icon: ListChecks },
+  { href: '/settings', labelKey: 'nav.settings', icon: Settings },
 ] satisfies Array<{ href: string; labelKey: TranslationKey; icon: React.ElementType }>;
+
+export function openCommandPalette() {
+  window.dispatchEvent(new CustomEvent('rorilo:open-palette'));
+}
+
+function isActive(href: string, pathname: string) {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useI18n();
-  const [collapsed, setCollapsed] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-      if (stored !== null) {
-        setCollapsed(stored === '1');
-      } else if (window.matchMedia('(max-width: 767px)').matches) {
-        setCollapsed(true);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    const updateScrollTop = () => setShowScrollTop(window.scrollY > 320);
-    updateScrollTop();
-    window.addEventListener('scroll', updateScrollTop, { passive: true });
-    return () => window.removeEventListener('scroll', updateScrollTop);
-  }, []);
-
-  const toggleCollapsed = () => {
-    setCollapsed((current) => {
-      try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, current ? '0' : '1');
-      } catch {
-        /* ignore */
-      }
-      return !current;
-    });
-  };
-
-  const setCollapsedPersistent = (value: boolean) => {
-    setCollapsed(value);
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, value ? '1' : '0');
-    } catch {
-      /* ignore */
-    }
-  };
-
-  // On mobile the sidebar is a drawer: navigating closes it again.
-  const closeDrawerOnMobile = () => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setCollapsedPersistent(true);
-    }
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const activeItem = NAV_ITEMS.find((item) =>
-    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-  );
-  const activeLabel = activeItem ? t(activeItem.labelKey) : t('nav.settings');
 
   return (
     <>
-      {collapsed && (
-        <div className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground">
-          <button
-            type="button"
-            onClick={() => setCollapsedPersistent(false)}
-            aria-label="Open navigation"
-            title="Open navigation"
-            className="flex size-9 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground shadow-xs cursor-pointer"
-          >
-            <Menu className="size-5" />
-          </button>
-          <button
-            type="button"
-            onClick={scrollToTop}
-            className="flex min-w-0 flex-1 items-center gap-2 text-left"
-            aria-label="Scroll to top"
-            title="Scroll to top"
-          >
-            <img
-              src="/logos/logo-light.svg"
-              alt=""
-              className="size-6 shrink-0 object-contain dark:hidden"
-            />
-            <img
-              src="/logos/logo-dark.svg"
-              alt=""
-              className="hidden size-6 shrink-0 object-contain dark:block"
-            />
-            <span className="min-w-0 truncate text-sm font-semibold text-sidebar-primary">{activeLabel}</span>
-          </button>
-          {showScrollTop && (
-            <button
-              type="button"
-              onClick={scrollToTop}
-              aria-label="Scroll to top"
-              title="Scroll to top"
-              className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-primary"
-            >
-              <ChevronUp className="size-5" />
-            </button>
-          )}
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex relative bg-sidebar border-r border-sidebar-border text-sidebar-foreground flex-col shrink-0 w-60 h-screen sticky top-0 select-none z-20">
+        <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
+          <Link href="/" aria-label="Rorilo home" className="flex items-center gap-2.5 rounded-xl focus-visible:ring-2 focus-visible:ring-sidebar-ring" title="Rorilo">
+            <span aria-hidden="true" className="flex size-8 items-center justify-center rounded-xl bg-primary">
+              <img
+                src="/logos/logo-dark.svg"
+                alt=""
+                width={18}
+                height={18}
+                className="size-[18px] object-contain dark:hidden"
+              />
+              <img
+                src="/logos/logo-light.svg"
+                alt=""
+                width={18}
+                height={18}
+                className="hidden size-[18px] object-contain dark:block"
+              />
+            </span>
+            <span className="text-[15px] font-bold text-sidebar-primary tracking-tight">Rorilo</span>
+          </Link>
         </div>
-      )}
-      {!collapsed && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40"
-          onClick={() => setCollapsedPersistent(true)}
-          aria-hidden="true"
-        />
-      )}
-    <aside
-      className={cn(
-        'relative bg-sidebar border-r border-sidebar-border text-sidebar-foreground flex flex-col shrink-0 h-screen sticky top-0 select-none z-20 transition-[width] duration-200 ease-in-out max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:shadow-2xl',
-        collapsed ? 'w-[68px] max-md:hidden' : 'w-56'
-      )}
-    >
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="absolute -right-3 top-7 z-10 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground transition-colors hover:text-sidebar-primary cursor-pointer"
+
+        <nav aria-label="Primary" className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overscroll-contain">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href, pathname);
+            const label = t(item.labelKey);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-3 px-3 h-11 rounded-2xl text-sm motion-safe:transition-colors motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none touch-manipulation',
+                  active
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground font-medium'
+                )}
+              >
+                <Icon className="size-5 shrink-0" aria-hidden="true" />
+                <span className="truncate">{label}</span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={openCommandPalette}
+            className="mt-4 flex w-full items-center gap-2.5 rounded-2xl border border-sidebar-border px-3 h-11 text-[13px] font-medium text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60 motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none touch-manipulation"
+          >
+            <Command className="size-[18px] shrink-0" aria-hidden="true" />
+            <span className="flex-1 truncate text-left">Jump to…</span>
+            <kbd className="rounded-lg border border-sidebar-border px-1.5 py-0.5 font-mono text-[11px] tabular-nums">⌘K</kbd>
+          </button>
+        </nav>
+
+        <div className="border-t border-sidebar-border p-3 space-y-1 shrink-0">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
+      </aside>
+
+      {/* Mobile bottom tab bar */}
+      <nav
+        aria-label="Primary"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-sidebar-border bg-sidebar/95 backdrop-blur-md pb-safe"
       >
-        {collapsed ? <ChevronsRight className="size-3.5" /> : <ChevronsLeft className="size-3.5" />}
-      </button>
-
-      {/* Brand */}
-      <div className={cn('h-14 flex items-center border-b border-sidebar-border shrink-0', collapsed ? 'justify-center px-0' : 'px-4')}>
-        <Link href="/" onClick={closeDrawerOnMobile} className="flex items-center gap-2.5 group" title="Rorilo">
-          <img
-            src="/logos/logo-light.svg"
-            alt="Rorilo"
-            className="size-6 object-contain transition-transform group-hover:scale-95 dark:hidden"
-          />
-          <img
-            src="/logos/logo-dark.svg"
-            alt="Rorilo"
-            className="hidden size-6 object-contain transition-transform group-hover:scale-95 dark:block"
-          />
-          {!collapsed && (
-            <span className="text-sm font-semibold text-sidebar-primary tracking-tight">Rorilo</span>
-          )}
-        </Link>
-      </div>
-
-      {/* Main Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {!collapsed && (
-          <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-widest text-neutral-600">
-            {t('app.workspace')}
-          </p>
-        )}
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === '/'
-              ? pathname === '/'
-              : pathname.startsWith(item.href);
-          const label = t(item.labelKey);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={closeDrawerOnMobile}
-              title={collapsed ? label : undefined}
-              className={cn(
-                'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                collapsed && 'justify-center px-0',
-                isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-                  : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent/70'
-              )}
-            >
-              <Icon className={cn('size-4 shrink-0', isActive ? 'text-sidebar-accent-foreground' : 'text-neutral-500')} />
-              {!collapsed && <span>{label}</span>}
-            </Link>
-          );
-        })}
+        <div className="grid grid-cols-5 h-16">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href, pathname);
+            const label = t(item.labelKey);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                aria-label={label}
+                className="flex flex-col items-center justify-center gap-1 min-h-[56px] touch-manipulation focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sidebar-ring focus-visible:outline-none"
+              >
+                <span
+                  className={cn(
+                    'flex items-center justify-center h-8 w-14 rounded-full motion-safe:transition-colors motion-safe:duration-150',
+                    active ? 'bg-primary text-primary-foreground' : 'text-sidebar-foreground'
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden="true" />
+                </span>
+                <span className={cn('text-[10.5px] leading-none', active ? 'font-semibold text-sidebar-primary' : 'font-medium text-sidebar-foreground')}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </nav>
-
-      {/* Bottom Settings Navigation with safe padding */}
-      <div className={cn('border-t border-sidebar-border pb-6 shrink-0 space-y-2', collapsed ? 'px-3' : 'p-3')}>
-        <LanguageToggle compact={collapsed} />
-        <ThemeToggle iconOnly={collapsed} />
-        <Link
-          href="/settings"
-          onClick={closeDrawerOnMobile}
-          title={collapsed ? t('nav.settings') : undefined}
-          className={cn(
-            'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-            collapsed && 'justify-center px-0',
-            pathname === '/settings'
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-              : 'text-sidebar-foreground hover:text-sidebar-primary hover:bg-sidebar-accent/70'
-          )}
-        >
-          <Settings className={cn('size-4 shrink-0', pathname === '/settings' ? 'text-sidebar-accent-foreground' : 'text-neutral-500')} />
-          {!collapsed && <span>{t('nav.settings')}</span>}
-        </Link>
-      </div>
-    </aside>
     </>
   );
 }

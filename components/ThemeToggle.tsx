@@ -37,7 +37,7 @@ export function ThemeToggle({ iconOnly = false }: { iconOnly?: boolean }) {
       aria-label={t('theme.switchTo', { theme: nextLabel })}
       title={t('theme.switchTo', { theme: nextLabel })}
     >
-      {theme === 'dark' ? <Moon className="size-4 shrink-0 text-neutral-500" /> : <Sun className="size-4 shrink-0 text-neutral-500" />}
+      {theme === 'dark' ? <Moon className="size-4 shrink-0 opacity-60" /> : <Sun className="size-4 shrink-0 opacity-60" />}
       {!iconOnly && <span>{currentLabel}</span>}
     </button>
   );

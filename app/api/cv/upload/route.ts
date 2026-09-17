@@ -17,6 +17,8 @@ export async function POST(req: Request) {
     const contentType = req.headers.get('content-type') || '';
     let extractedText = '';
     let filename = 'Pasted_Resume.txt';
+    let fileData: Uint8Array | null = null;
+    let mimeType = 'text/plain';
 
     if (contentType.includes('application/json')) {
       const body = await req.json().catch(() => ({}));
@@ -25,6 +27,8 @@ export async function POST(req: Request) {
       }
       extractedText = body.text.trim();
       filename = body.filename || 'Pasted_Resume.txt';
+      fileData = new TextEncoder().encode(extractedText);
+      mimeType = filename.endsWith('.md') ? 'text/markdown' : 'text/plain';
     } else {
       const formData = await req.formData();
       const pastedText = formData.get('text') as string | null;
@@ -33,6 +37,8 @@ export async function POST(req: Request) {
       if (pastedText && pastedText.trim()) {
         extractedText = pastedText.trim();
         filename = (formData.get('filename') as string) || 'Pasted_Resume.txt';
+        fileData = new TextEncoder().encode(extractedText);
+        mimeType = filename.endsWith('.md') ? 'text/markdown' : 'text/plain';
       } else if (file) {
         if (file.size > 10 * 1024 * 1024) {
           return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
@@ -44,7 +50,12 @@ export async function POST(req: Request) {
         if (filename.endsWith('.txt') || filename.endsWith('.md')) {
           const buffer = Buffer.from(bytes);
           extractedText = buffer.toString('utf-8').trim();
+          fileData = new TextEncoder().encode(extractedText);
+          mimeType = filename.endsWith('.md') ? 'text/markdown' : 'text/plain';
         } else {
+          // Keep the original upload so it can be downloaded again later.
+          fileData = new Uint8Array(bytes);
+          mimeType = file.type || 'application/pdf';
           // Extract text from PDF
           try {
             extractedText = await extractTextFromPdf(new Uint8Array(bytes));
@@ -75,13 +86,30 @@ export async function POST(req: Request) {
       data: { isActive: false },
     });
 
-    // Save active CV record
+    // Save active CV record (file bytes stay server-side; never send them back as JSON)
+    // Note: cast is safe — the buffers always wrap real ArrayBuffers at runtime.
+    const fileBytes = (fileData as Uint8Array<ArrayBuffer> | null) ?? undefined;
     const cv = await prisma.cV.create({
       data: {
         originalFilename: filename,
+        fileData: fileBytes,
+        mimeType,
+        fileSize: fileData ? fileData.byteLength : undefined,
         extractedText,
         structuredData: JSON.stringify(structured),
         isActive: true,
+      },
+      select: {
+        id: true,
+        originalFilename: true,
+        mimeType: true,
+        fileSize: true,
+        extractedText: true,
+        structuredData: true,
+        isActive: true,
+        uploadDate: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 

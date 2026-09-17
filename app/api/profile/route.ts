@@ -34,7 +34,11 @@ function richerArray(current: string | undefined | null, next: unknown[], replac
 
 async function enrichStaleProfileFromCv(
   profile: Awaited<ReturnType<typeof prisma.userProfile.findFirst>>,
-  activeCv: Awaited<ReturnType<typeof prisma.cV.findFirst>>
+  activeCv: {
+    id: string;
+    extractedText: string;
+    structuredData: string;
+  } | null
 ) {
   if (!activeCv?.extractedText) return { profile, activeCv };
 
@@ -60,6 +64,7 @@ async function enrichStaleProfileFromCv(
     nextCv = await prisma.cV.update({
       where: { id: activeCv.id },
       data: { structuredData: JSON.stringify(enhanced) },
+      omit: { fileData: true },
     });
   }
 
@@ -131,8 +136,15 @@ export async function GET() {
     const [profile, preferences, activeCvRaw, cvList] = await Promise.all([
       prisma.userProfile.findFirst({ where: { id: 'default' } }),
       prisma.jobPreference.findFirst({ where: { id: 'default' } }),
-      prisma.cV.findFirst({ where: { isActive: true }, orderBy: { uploadDate: 'desc' } }),
-      prisma.cV.findMany({ orderBy: { uploadDate: 'desc' } }),
+      prisma.cV.findFirst({
+        where: { isActive: true },
+        orderBy: { uploadDate: 'desc' },
+        omit: { fileData: true },
+      }),
+      prisma.cV.findMany({
+        orderBy: { uploadDate: 'desc' },
+        omit: { fileData: true },
+      }),
     ]);
     const { profile: enrichedProfile, activeCv } = await enrichStaleProfileFromCv(profile, activeCvRaw);
 

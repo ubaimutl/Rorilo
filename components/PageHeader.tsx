@@ -10,29 +10,30 @@ interface PageHeaderProps {
   back?: { href: string; label: string };
   badge?: React.ReactNode;
   actions?: React.ReactNode;
+  sticky?: boolean;
 }
 
-export function PageHeader({ title, description, back, badge, actions }: PageHeaderProps) {
+export function PageHeader({ title, description, back, badge, actions, sticky = true }: PageHeaderProps) {
   return (
-    <header className="min-h-16 px-4 sm:px-6 md:px-10 py-3 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 bg-background/95 backdrop-blur-xs z-10 shrink-0 md:sticky md:top-0">
+    <header className={`min-h-16 px-4 sm:px-6 lg:px-10 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-background/90 backdrop-blur-md z-10 shrink-0 ${sticky ? 'md:sticky md:top-0' : ''}`}>
       <div className="min-w-0 flex-1">
         {back && (
           <Link
             href={back.href}
-            className="text-sm font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 transition-colors mb-0.5"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 rounded-md motion-safe:transition-colors motion-safe:duration-150 mb-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
           >
-            <ArrowLeft className="size-4" />
+            <ArrowLeft className="size-4" aria-hidden="true" />
             <span>{back.label}</span>
           </Link>
         )}
         <div className="flex items-center gap-2.5 min-w-0">
-          <h1 className="text-lg sm:text-xl font-semibold text-neutral-900 tracking-tight truncate">
+          <h1 className="font-heading text-[22px] text-foreground text-balance leading-snug min-w-0">
             {title}
           </h1>
           {badge}
         </div>
         {description && (
-          <p className="text-sm text-neutral-500 mt-0.5 truncate">{description}</p>
+          <p className="text-sm text-muted-foreground mt-1 text-pretty leading-relaxed max-w-[62ch]">{description}</p>
         )}
       </div>
 

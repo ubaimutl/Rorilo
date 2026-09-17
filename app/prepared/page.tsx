@@ -34,13 +34,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { resolveSourceUrl } from '@/lib/jobs/normalize';
 import { useI18n } from '@/components/I18nProvider';
 import { downloadCoverLetterPdf, CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/pdf/generatePdf';
 import { notify } from '@/components/AppNotifications';
 import { JobDescriptionInput } from '@/components/JobDescriptionInput';
 import { RequestChanges } from '@/components/RequestChanges';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 export default function PreparedJobsPage() {
   const { t } = useI18n();
@@ -70,6 +71,7 @@ export default function PreparedJobsPage() {
   const [savingCover, setSavingCover] = useState(false);
   const [editingContactEmail, setEditingContactEmail] = useState(false);
   const [contactEmailInput, setContactEmailInput] = useState('');
+  const confirm = useConfirm();
 
   const handleSaveContactEmail = async () => {
     if (!selectedJob) return;
@@ -157,7 +159,12 @@ export default function PreparedJobsPage() {
   }, [selectedJobId]);
 
   const handleDeleteJob = async (jobId: string) => {
-    if (!confirm(t('common.confirmDelete' as any) || 'Are you sure you want to delete this job?')) return;
+    const ok = await confirm({
+      title: t('common.confirmDelete' as any) || 'Delete this job?',
+      confirmLabel: t('jobcard.delete'),
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete job');
@@ -246,9 +253,10 @@ export default function PreparedJobsPage() {
 
   const handleRegenerateMaterials = async () => {
     if (!selectedJob) return;
-    const shouldRegenerate = window.confirm(
-      t('drafts.regenConfirm')
-    );
+    const shouldRegenerate = await confirm({
+      title: t('drafts.regenConfirm'),
+      confirmLabel: t('drafts.regenerateShort'),
+    });
     if (!shouldRegenerate) return;
 
     setRegenerating(true);
@@ -436,12 +444,13 @@ export default function PreparedJobsPage() {
     selectedDraftInactiveDays >= 3;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-background min-h-screen md:h-screen md:overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 bg-background">
       <PageHeader
+        sticky={false}
         title={t('drafts.title')}
         description={t('drafts.description')}
         badge={
-          <span className="text-xs text-neutral-500 font-semibold bg-neutral-200/70 px-2.5 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-primary">
             {t('drafts.ready', { count: preparedJobs.length })}
           </span>
         }
@@ -457,14 +466,14 @@ export default function PreparedJobsPage() {
       />
 
       {/* Main Master-Detail Split Workspace */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left Column: Prepared Jobs List (340px) */}
-        <aside className={`w-full md:w-80 lg:w-96 border-r border-neutral-200 flex-col bg-neutral-50/50 shrink-0 overflow-y-auto ${selectedJobId ? 'hidden md:flex' : 'flex'}`}>
+      <div className="flex-1 flex flex-col md:flex-row md:items-start min-w-0">
+        {/* Left Column: Prepared Jobs List (340px) — pinned while the detail scrolls */}
+        <aside className={`w-full md:w-80 lg:w-96 shrink-0 md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:overflow-y-auto md:overscroll-contain md:p-3 ${selectedJobId ? 'hidden md:block' : 'block'}`}>
           {loading ? (
-            <div className="flex flex-col gap-4 p-4" aria-label={t('drafts.loading')}>
+            <div className="flex flex-col gap-4 p-4" role="status" aria-label={t('drafts.loading')}>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="size-9 shrink-0 rounded-full" />
+                <div key={i} aria-hidden="true" className="flex items-center gap-3">
+                  <Skeleton className="size-9 shrink-0 rounded-[10px]" />
                   <div className="flex flex-1 flex-col gap-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
@@ -495,45 +504,56 @@ export default function PreparedJobsPage() {
               </Empty>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-200/80">
+            <div className="flex flex-col gap-2 p-3 md:p-0">
               {preparedJobs.map((item) => {
                 const isSelected = item.job.id === selectedJobId;
                 const score = displayMatchScore(item.job.match);
                 const inactiveDays = getInactiveDays(item.updatedAt);
 
                 return (
-                  <button
+                  <div
                     key={item.id}
                     onClick={() => setSelectedJobId(item.job.id)}
-                    className={`w-full text-left p-4 transition-colors cursor-pointer block border-l-2 ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedJobId(item.job.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-current={isSelected || undefined}
+                    aria-label={`${item.job.title} at ${item.job.company}`}
+                    className={cn(
+                      'w-full text-left p-3.5 rounded-2xl border cursor-pointer block motion-safe:transition-colors motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                       isSelected
-                        ? 'bg-white border-l-neutral-900 shadow-xs'
-                        : 'border-l-transparent hover:bg-neutral-100/70'
-                    }`}
+                        ? 'bg-primary border-primary text-primary-foreground shadow-[0_12px_32px_-16px_rgba(19,20,23,0.5)]'
+                        : 'bg-card/60 border-border hover:border-primary/25 hover:bg-card'
+                    )}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <CompanyLogo
                         company={item.job.company}
                         website={item.job.companyWebsite}
                         directLogoUrl={item.job.companyLogo}
-                        size={34}
+                        size={36}
                       />
                       <div className="min-w-0 flex-1">
-                        <h2 className="text-sm font-semibold text-neutral-900 truncate tracking-tight">
+                        <h2 className={cn('text-sm font-semibold truncate tracking-[-0.01em]', isSelected ? 'text-primary-foreground' : 'text-foreground')}>
                           {item.job.title}
                         </h2>
-                        <p className="text-xs text-neutral-500 mt-0.5 truncate">
+                        <p className={cn('text-xs mt-0.5 truncate', isSelected ? 'text-primary-foreground/65' : 'text-muted-foreground')}>
                           {item.job.company} · {item.job.location || t('discover.workplace.remote')}
                         </p>
                       </div>
-                      <ScoreRing score={score} size={34} calibrated={isAiCalibrated(item.job.match)} />
+                      <ScoreRing score={score} size={36} calibrated={isAiCalibrated(item.job.match)} inverted={isSelected} />
                     </div>
 
-                    <div className="flex items-center justify-between mt-2.5 text-xs text-neutral-400">
-                      <span className="font-medium text-neutral-600 capitalize">
+                    <div className={cn('flex items-center justify-between mt-2.5 text-xs tabular-nums', isSelected ? 'text-primary-foreground/65' : 'text-muted-foreground')}>
+                      <span className="font-medium capitalize">
                         {item.status.toLowerCase().replace('_', ' ')}
                       </span>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <span>{formatDate(item.updatedAt)}</span>
                         <button
                           type="button"
@@ -541,19 +561,30 @@ export default function PreparedJobsPage() {
                             e.stopPropagation();
                             handleDeleteJob(item.job.id);
                           }}
-                          className="p-1 rounded text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                          aria-label={t('jobcard.delete')}
                           title={t('common.delete' as any) || 'Delete'}
+                          className={cn(
+                            'p-1.5 rounded-md motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                            isSelected
+                              ? 'text-primary-foreground/60 hover:text-primary-foreground hover:bg-white/10 dark:hover:bg-black/10'
+                              : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                          )}
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
                     {inactiveDays >= 3 && (
-                      <p className="mt-2 text-xs font-medium text-amber-700">
+                      <p className={cn(
+                        'mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
+                        isSelected
+                          ? 'bg-white/10 text-amber-200 dark:bg-black/10 dark:text-amber-800'
+                          : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                      )}>
                         {t('drafts.sendOrArchive')}
                       </p>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -561,70 +592,86 @@ export default function PreparedJobsPage() {
         </aside>
 
         {/* Right Column: Selected Job Detail & Application Material */}
-        <main className={`flex-1 flex-col min-w-0 bg-background overflow-y-auto ${selectedJobId ? 'flex' : 'hidden md:flex'}`}>
+        <main className={`flex-1 flex-col min-w-0 ${selectedJobId ? 'flex' : 'hidden md:flex'}`}>
           {selectedJob ? (
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-w-0">
               {/* Right Panel Header */}
-              <div className="px-4 sm:px-8 py-5 border-b border-neutral-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-background z-10 shrink-0 md:sticky md:top-0">
-                <div className="min-w-0 max-w-full">
+              <div className="px-3 sm:px-6 pt-3 sm:pt-4">
+              <div className="rounded-3xl border border-border bg-card/95 backdrop-blur-md px-4 sm:px-5 py-4 shadow-[0_12px_40px_-24px_rgba(19,20,23,0.3)] flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => setSelectedJobId(null)}
-                    className="md:hidden text-sm font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 transition-colors mb-1 cursor-pointer"
+                    className="md:hidden text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1.5 motion-safe:transition-colors mb-1 cursor-pointer rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
-                    <ArrowLeft className="size-4" />
+                    <ArrowLeft className="size-4" aria-hidden="true" />
                     <span>{t('drafts.all')}</span>
                   </button>
-                  <h1 className="text-xl font-bold text-neutral-900 tracking-tight break-words">
+                  <h1 className="font-heading text-xl sm:text-2xl text-foreground break-words text-balance">
                     {selectedJob.title}
                   </h1>
-                  <p className="text-xs text-neutral-500 mt-1 break-words">
+                  <p className="text-[13px] text-muted-foreground mt-1 break-words">
                     {selectedJob.company} · {selectedJob.location || t('discover.workplace.remote')} ·{' '}
                     <span className="capitalize">{selectedJob.remoteType}</span>
                   </p>
                 </div>
 
-                <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
-                  {appliedStatusNotice && (
-                    <span className="text-xs text-emerald-700 font-medium">{appliedStatusNotice}</span>
-                  )}
-                  {materialNotice && (
-                    <span className={`basis-full text-xs font-medium lg:basis-auto ${/could not|failed|error/i.test(materialNotice) ? 'text-red-600' : 'text-emerald-700'}`}>
-                      {materialNotice}
-                    </span>
-                  )}
-
+                <div className="flex shrink-0 items-center gap-1.5">
                   <Button
                     onClick={handleRegenerateMaterials}
                     disabled={regenerating}
-                    size="sm"
                     variant="outline"
-                    className="text-xs h-8 gap-1.5"
+                    className="h-10 rounded-full px-4 text-[13px]"
+                    title={regenerating ? t('drafts.regenerating') : t('drafts.regenerateShort')}
                   >
-                    {regenerating ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
-                    <span>{regenerating ? t('drafts.regenerating') : t('drafts.regenerateShort')}</span>
+                    {regenerating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <RotateCcw className="size-4" aria-hidden="true" />}
+                    <span className="hidden sm:inline">{regenerating ? t('drafts.regenerating') : t('drafts.regenerateShort')}</span>
                   </Button>
 
                   {selectedJob.application?.status !== 'APPLIED' ? (
                     <Button
                       onClick={() => handleStatusChange('APPLIED')}
-                      size="sm"
-                      className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                      className="h-10 rounded-full px-4 text-[13px]"
                     >
-                      <CheckCircle2 className="size-3.5" />
-                      <span>{t('drafts.markApplied')}</span>
+                      <CheckCircle2 className="size-4" aria-hidden="true" />
+                      <span className="hidden sm:inline">{t('drafts.markApplied')}</span>
+                      <span className="sm:hidden">{t('drafts.markAppliedShort')}</span>
                     </Button>
                   ) : (
-                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 flex items-center gap-1">
-                      <Check className="size-3.5" /> {t('tracker.colApplied')}
+                    <span className="inline-flex h-10 items-center gap-1.5 rounded-full border border-emerald-600/25 bg-emerald-600/[0.08] px-4 text-[13px] font-semibold text-emerald-700 dark:text-emerald-300">
+                      <Check className="size-4" aria-hidden="true" /> {t('tracker.colApplied')}
                     </span>
                   )}
 
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteJob(selectedJob.id)}
+                    aria-label={t('common.delete' as any) || 'Delete'}
+                    title={t('common.delete' as any) || 'Delete'}
+                    className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  >
+                    <Trash2 className="size-[18px]" aria-hidden="true" />
+                  </button>
+                </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {appliedStatusNotice && (
+                    <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium" role="status">{appliedStatusNotice}</span>
+                  )}
+                  {materialNotice && (
+                    <span role="status" className={`text-xs font-medium ${/could not|failed|error/i.test(materialNotice) ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                      {materialNotice}
+                    </span>
+                  )}
+
+                  <label htmlFor="draft-status" className="sr-only">{t('drafts.statusAria')}</label>
                   <select
+                    id="draft-status"
                     value={selectedJob.application?.status || 'READY'}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    aria-label={t('drafts.statusAria')}
-                    className="h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-xs font-semibold text-neutral-800 outline-none cursor-pointer"
+                    className="h-9 rounded-full border border-border bg-transparent px-3 text-[13px] font-medium cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <option value="READY">{t('drafts.statusReady')}</option>
                     <option value="APPLIED">{t('tracker.colApplied')}</option>
@@ -633,32 +680,23 @@ export default function PreparedJobsPage() {
                     <option value="REJECTED">{t('tracker.colRejected')}</option>
                   </select>
 
-                  <Button
-                    onClick={() => handleDeleteJob(selectedJob.id)}
-                    size="sm"
-                    variant="outline"
-                    className="text-xs h-8 px-2 text-neutral-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                    title={t('common.delete' as any) || 'Delete'}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-
                   {selectedJob.applicationUrl && (
                     <a
                       href={selectedJob.applicationUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className={buttonVariants({ variant: 'outline', size: 'sm', className: 'text-xs h-8 gap-1' })}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
                     >
                       <span>{t('company.website')}</span>
-                      <ExternalLink className="size-3 text-neutral-400" />
+                      <ExternalLink className="size-3.5" aria-hidden="true" />
                     </a>
                   )}
                 </div>
               </div>
+              </div>
 
               {/* Right Side Top Menu (Tabs) */}
-              <div className="px-4 sm:px-8 pt-4 sm:pt-5 shrink-0 overflow-x-auto">
+              <div className="px-3 sm:px-6 pt-3 shrink-0 overflow-x-auto">
                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'material' | 'description' | 'match')}>
                   <TabsList>
                     <TabsTrigger value="material">
@@ -681,9 +719,9 @@ export default function PreparedJobsPage() {
               </div>
 
               {/* Tab Content Area */}
-              <div className="flex-1 p-4 sm:p-8 max-w-4xl w-full overflow-y-auto">
+              <div className="flex-1 px-3 sm:px-6 py-4 sm:py-5 max-w-4xl w-full">
                 {shouldSuggestDraftAction && (
-                  <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="mb-4 rounded-2xl border border-amber-600/20 bg-amber-500/[0.07] px-4 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-amber-900">
                         {t('drafts.staleTitle', { count: selectedDraftInactiveDays })}
@@ -715,52 +753,79 @@ export default function PreparedJobsPage() {
                   </div>
                 )}
                 {activeTab === 'material' && (
-                  <div className="space-y-8">
+                  <div className="flex flex-col gap-4">
                     {/* Email Draft Section */}
-                    <div className="space-y-4">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex-1">
-                            {editingContactEmail ? (
-                              <div className="flex items-center gap-2 max-w-sm mb-1.5">
-                                <Input 
-                                  value={contactEmailInput} 
-                                  onChange={(e) => setContactEmailInput(e.target.value)} 
-                                  placeholder="Recruiter email..." 
-                                  className="h-8 text-xs" 
-                                />
-                                <Button size="sm" onClick={handleSaveContactEmail} className="h-8 text-xs px-3">{t('revise.save')}</Button>
-                                {selectedJob.contactEmail && <Button size="sm" variant="ghost" onClick={() => setEditingContactEmail(false)} className="h-8 px-2 text-xs">{t('common.cancel')}</Button>}
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 group cursor-pointer mb-1.5" onClick={() => setEditingContactEmail(true)}>
-                                {selectedJob.contactEmail ? (
-                                  <h2 className="text-sm font-semibold text-neutral-900 border-b border-dashed border-neutral-300 pb-0.5 hover:border-neutral-500 transition-colors">
-                                    {t('material.emailTo', { email: selectedJob.contactEmail })}
-                                  </h2>
-                                ) : (
-                                  <Button variant="secondary" size="sm" className="h-7 text-xs gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200">
-                                    <Mail className="size-3.5" />
-                                    Set Recruiter Email
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                            <p className="text-xs text-neutral-500">
-                              {t('material.tailoredHint')}
-                            </p>
-                          </div>
-
+                    <section aria-label={t('drafts.emailCaption')} className="rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {t('drafts.emailCaption')}
+                        </h2>
+                        <div className="flex items-center gap-1">
                           <button
+                            type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${emailBody}`);
                               setCopiedEmail(true);
                               setTimeout(() => setCopiedEmail(false), 2000);
                             }}
-                            className="text-xs text-neutral-500 hover:text-neutral-900 flex items-center gap-1 cursor-pointer"
+                            aria-label={t('material.copyText')}
+                            title={t('material.copyText')}
+                            className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                           >
-                            {copiedEmail ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-                            <span>{copiedEmail ? t('material.copied') : t('material.copyText')}</span>
+                            {copiedEmail ? <Check className="size-[18px] text-emerald-600" aria-hidden="true" /> : <Copy className="size-[18px]" aria-hidden="true" />}
                           </button>
+                          <a
+                            href={`mailto:${encodeURIComponent(
+                              selectedJob.contactEmail || ''
+                            )}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+                            onClick={() => {
+                              notify({
+                                type: 'info',
+                                title: t('drafts.openingMail'),
+                                message: t('drafts.handingClient'),
+                              });
+                            }}
+                            aria-label={t('material.openMailApp')}
+                            title={t('drafts.mailTitle')}
+                            className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
+                          >
+                            <Mail className="size-[18px]" aria-hidden="true" />
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex-1">
+                            {editingContactEmail ? (
+                              <div className="flex items-center gap-2 max-w-sm mb-1.5">
+                                <Input
+                                  value={contactEmailInput}
+                                  onChange={(e) => setContactEmailInput(e.target.value)}
+                                  placeholder="Recruiter email..."
+                                  className="h-10 text-sm"
+                                />
+                                <Button onClick={handleSaveContactEmail} className="h-10 px-4">{t('revise.save')}</Button>
+                                {selectedJob.contactEmail && <Button variant="ghost" onClick={() => setEditingContactEmail(false)} className="h-10 px-3">{t('common.cancel')}</Button>}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 group cursor-pointer mb-1.5" onClick={() => setEditingContactEmail(true)}>
+                                {selectedJob.contactEmail ? (
+                                  <h3 className="text-sm font-semibold border-b border-dashed border-border pb-0.5 hover:border-muted-foreground motion-safe:transition-colors">
+                                    {t('material.emailTo', { email: selectedJob.contactEmail })}
+                                  </h3>
+                                ) : (
+                                  <Button variant="secondary" size="sm" className="h-8 text-[13px] gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-200">
+                                    <Mail className="size-3.5" aria-hidden="true" />
+                                    Set Recruiter Email
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                            <p className="text-[13px] text-muted-foreground">
+                              {t('material.tailoredHint')}
+                            </p>
+                          </div>
                         </div>
 
                         <RequestChanges
@@ -769,41 +834,40 @@ export default function PreparedJobsPage() {
                           onApply={handleReviseEmail}
                         />
 
-                        <div className="space-y-1.5">
-                          <Label htmlFor="prep-email-sub" className="text-xs font-medium text-neutral-700">{t('material.subject')}</Label>
+                        <div className="mt-4 space-y-1.5">
+                          <Label htmlFor="prep-email-sub" className="text-[13px] font-medium">{t('material.subject')}</Label>
                           <Input
                             id="prep-email-sub"
                             value={emailSubject}
                             onChange={(e) => setEmailSubject(e.target.value)}
-                            className="text-sm h-9"
+                            className="text-sm h-11"
                           />
                         </div>
 
-                        <div className="space-y-1.5">
-                          <Label htmlFor="prep-email-msg" className="text-xs font-medium text-neutral-700">{t('material.message')}</Label>
+                        <div className="mt-3 space-y-1.5">
+                          <Label htmlFor="prep-email-msg" className="text-[13px] font-medium">{t('material.message')}</Label>
                           <Textarea
                             id="prep-email-msg"
                             value={emailBody}
                             onChange={(e) => setEmailBody(e.target.value)}
                             rows={8}
-                            className="text-sm font-sans leading-relaxed bg-white"
+                            className="text-sm leading-relaxed"
                           />
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
-                          <span className="text-xs text-neutral-400">
+                        <div className="mt-4 flex flex-col gap-3 border-t border-border/70 pt-4">
+                          <span className="text-xs text-muted-foreground">
                             {t('material.attachments', { list: 'Resume (PDF), Cover Letter (PDF)' })}
                           </span>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             {emailDoc && (
                               <Button
                                 onClick={handleSaveEmail}
                                 disabled={savingEmail}
-                                size="sm"
                                 variant="outline"
-                                className="text-xs h-8 gap-1.5 shadow-xs"
+                                className="flex-1"
                               >
-                                {savingEmail ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                                {savingEmail ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
                                 <span>{savingEmail ? t('common.saving') : t('revise.save')}</span>
                               </Button>
                             )}
@@ -821,80 +885,46 @@ export default function PreparedJobsPage() {
                                   message: t('drafts.handingBrowser'),
                                 });
                               }}
-                              className={buttonVariants({
-                                variant: 'outline',
-                                size: 'sm',
-                                className: 'text-xs h-8 gap-1.5 cursor-pointer shadow-xs',
-                              })}
+                              className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border px-4 text-sm font-semibold hover:bg-muted motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
                               title={t('drafts.gmailTitle')}
                             >
-                              <ExternalLink className="size-3.5 text-neutral-500" />
+                              <ExternalLink className="size-4 text-muted-foreground" aria-hidden="true" />
                               <span>{t('material.openGmail')}</span>
-                            </a>
-
-                            {/* 1-Click Open in Default Mail Client (Apple Mail, Outlook, Thunderbird) */}
-                            <a
-                              href={`mailto:${encodeURIComponent(
-                                selectedJob.contactEmail || ''
-                              )}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
-                              onClick={() => {
-                                notify({
-                                  type: 'info',
-                                  title: t('drafts.openingMail'),
-                                  message: t('drafts.handingClient'),
-                                });
-                              }}
-                              className={buttonVariants({
-                                variant: 'outline',
-                                size: 'sm',
-                                className: 'text-xs h-8 gap-1.5 cursor-pointer shadow-xs',
-                              })}
-                              title={t('drafts.mailTitle')}
-                            >
-                              <Mail className="size-3.5 text-neutral-500" />
-                              <span>{t('material.openMailApp')}</span>
                             </a>
 
                             {/* API Background Draft (If Google Cloud OAuth is configured) */}
                             <Button
                               onClick={handleCreateDraft}
                               disabled={draftingEmail}
-                              size="sm"
-                              className="text-xs h-8 gap-1.5 shadow-xs"
+                              size="lg"
+                              className="flex-1"
                               title={t('drafts.apiTitle')}
                             >
-                              {draftingEmail ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5 mr-1" />}
+                              {draftingEmail ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
                               <span>{t('material.saveGmailDrafts')}</span>
                             </Button>
                           </div>
                         </div>
 
                         {draftNotice && (
-                          <p className="text-sm text-emerald-700 font-medium">{draftNotice}</p>
+                          <p role="status" className="mt-3 text-sm text-emerald-700 dark:text-emerald-300 font-medium">{draftNotice}</p>
                         )}
-
-                        <Separator />
                       </div>
+                    </section>
 
                     {/* Cover Letter Section */}
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-3">
-                        <div className="min-w-0">
-                          <h2 className="text-sm font-semibold text-neutral-900">
-                            {t('material.coverLetter')}
-                          </h2>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            {t('material.tailoredCoverHint')}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <label className="text-xs text-neutral-500 font-medium">{t('material.templateLabel')}</label>
+                    <section aria-label={t('drafts.coverCaption')} className="rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {t('drafts.coverCaption')}
+                        </h2>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="cover-template" className="sr-only">{t('material.templateLabel')}</label>
                           <select
+                            id="cover-template"
                             value={selectedTemplate}
                             onChange={(e) => setSelectedTemplate(e.target.value as any)}
-                            aria-label={t('coverletter.templateAria')}
-                            className="h-8 min-w-0 max-w-52 truncate rounded-lg border border-input bg-white px-2.5 py-1 text-xs font-medium text-neutral-800 outline-none cursor-pointer shadow-xs"
+                            className="h-10 max-w-44 truncate rounded-full border border-border bg-transparent px-3 text-[13px] font-medium cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                           >
                             {COVER_LETTER_TEMPLATES.map((tmpl) => (
                               <option key={tmpl.id} value={tmpl.id}>
@@ -902,44 +932,51 @@ export default function PreparedJobsPage() {
                               </option>
                             ))}
                           </select>
-
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleDownloadPdf}
-                            className="text-xs h-8 gap-1.5 shadow-xs"
-                          >
-                            <Download className="size-3.5" />
-                            <span>{t('material.downloadPdf')}</span>
-                          </Button>
-                          {coverDoc && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleSaveCover}
-                              disabled={savingCover}
-                              className="text-xs h-8 gap-1.5 shadow-xs"
-                            >
-                              {savingCover ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-                              <span>{savingCover ? t('common.saving') : t('revise.save')}</span>
-                            </Button>
-                          )}
                         </div>
                       </div>
+                      <p className="mt-1.5 text-[13px] text-muted-foreground">
+                        {t('material.tailoredCoverHint')}
+                      </p>
 
+                      <div className="mt-3">
                       <RequestChanges
                         inputId="prep-revise-cover"
                         applying={revisingCover}
                         onApply={handleReviseCover}
                       />
+                      </div>
 
                       <Textarea
                         value={coverLetterContent}
                         onChange={(e) => setCoverLetterContent(e.target.value)}
                         rows={12}
-                        className="min-h-96 text-[15px] font-sans leading-7 bg-white px-5 py-4"
+                        aria-label={t('drafts.coverCaption')}
+                        className="mt-3 min-h-96 text-[15px] leading-7 px-5 py-4"
                       />
-                    </div>
+
+                      <div className="mt-4 flex flex-col sm:flex-row gap-2 border-t border-border/70 pt-4">
+                        <Button
+                          size="lg"
+                          onClick={handleDownloadPdf}
+                          className="flex-1"
+                        >
+                          <Download className="size-4" aria-hidden="true" />
+                          <span>{t('material.downloadPdf')}</span>
+                        </Button>
+                        {coverDoc && (
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            onClick={handleSaveCover}
+                            disabled={savingCover}
+                            className="flex-1"
+                          >
+                            {savingCover ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+                            <span>{savingCover ? t('common.saving') : t('revise.save')}</span>
+                          </Button>
+                        )}
+                      </div>
+                    </section>
 
                     {/* Screening Q&A */}
                     {qaData?.answers && qaData.answers.length > 0 && (
@@ -955,7 +992,7 @@ export default function PreparedJobsPage() {
 
                         <div className="space-y-3">
                           {qaData.answers.map((qa, i) => (
-                            <div key={i} className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/50 space-y-1.5">
+                            <div key={i} className="p-4 rounded-2xl border border-border bg-muted/40 space-y-1.5">
                               <p className="text-sm font-semibold text-neutral-900">{qa.question}</p>
                               <p className="text-sm text-neutral-600 leading-relaxed">{qa.answer}</p>
                             </div>
@@ -967,18 +1004,25 @@ export default function PreparedJobsPage() {
                 )}
 
                 {activeTab === 'description' && (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                  <div className="flex flex-col gap-4">
+                    <div className="rounded-3xl border border-border bg-card p-5 sm:p-8 shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]">
+                      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {t('drafts.original')}
                       </h2>
                       {(selectedJob.salaryMin || selectedJob.salaryMax) && (
-                        <p className="text-base font-semibold text-neutral-900 mt-2">
+                        <p className="text-lg font-bold tabular-nums tracking-tight mt-2">
                           {formatCurrency(selectedJob.salaryMin, selectedJob.salaryCurrency || 'USD')}
                           {selectedJob.salaryMax && selectedJob.salaryMax !== selectedJob.salaryMin
                             ? ` – ${formatCurrency(selectedJob.salaryMax, selectedJob.salaryCurrency || 'USD')}`
                             : ''}
                         </p>
+                      )}
+                      {(selectedJob.description || '').trim().length > 0 && (
+                        <div className="mt-5">
+                          <FormattedDescription
+                            text={selectedJob.description}
+                          />
+                        </div>
                       )}
                     </div>
 
@@ -1019,13 +1063,6 @@ export default function PreparedJobsPage() {
                           </Button>
                         </div>
                       )}
-
-                    {(selectedJob.description || '').trim().length > 0 && (
-                      <FormattedDescription
-                        text={selectedJob.description}
-                        className="text-sm leading-relaxed"
-                      />
-                    )}
 
                     {(selectedJob.description || '').trim().length < 200 && (
                       <JobDescriptionInput

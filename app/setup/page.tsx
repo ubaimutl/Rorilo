@@ -513,12 +513,15 @@ export default function SetupPage() {
         }
       />
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-5 md:p-8">
-        <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 sm:px-6 lg:px-8 py-6 md:py-8 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150">
+        <section aria-label="Setup progress" className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">{t('setup.progress', { count: completedCount, total: SETUP_AREA_STEPS.length })}</p>
-              <p className="mt-1 text-sm text-neutral-500">{t('setup.progressHint')}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tabular-nums text-foreground">{t('setup.progress', { count: completedCount, total: SETUP_AREA_STEPS.length })}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('setup.progressHint')}</p>
+              <div className="mt-2.5 h-1.5 w-full max-w-64 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={completedCount} aria-valuemin={0} aria-valuemax={SETUP_AREA_STEPS.length} aria-label={t('setup.progress', { count: completedCount, total: SETUP_AREA_STEPS.length })}>
+                <div className="h-full rounded-full bg-primary motion-safe:transition-[width] motion-safe:duration-300" style={{ width: `${Math.round((completedCount / Math.max(1, SETUP_AREA_STEPS.length)) * 100)}%` }} />
+              </div>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {STEPS.map((item, index) => {
@@ -530,16 +533,17 @@ export default function SetupPage() {
                     key={item.id}
                     type="button"
                     onClick={() => setStepIndex(index)}
+                    aria-current={active ? 'step' : undefined}
                     className={cn(
-                      'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors',
+                      'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs motion-safe:transition-colors motion-safe:duration-150 touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                       active
                         ? 'border-primary bg-primary text-primary-foreground'
                         : complete
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                          ? 'border-emerald-600/25 bg-emerald-600/[0.08] text-emerald-700 dark:text-emerald-300'
                           : 'border-border bg-card text-muted-foreground hover:bg-muted'
                     )}
                   >
-                    {complete && !active ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
+                    {complete && !active ? <Check className="size-3.5" aria-hidden="true" /> : <Icon className="size-3.5" aria-hidden="true" />}
                     <span className="font-medium">{t(item.titleKey)}</span>
                   </button>
                 );
@@ -548,10 +552,10 @@ export default function SetupPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-border bg-card p-5 shadow-xs">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
           <div className="mb-5 flex flex-col gap-1">
-            <h2 className="text-lg font-semibold text-neutral-950">{t(step.titleKey)}</h2>
-            <p className="text-sm text-neutral-500">{t(step.hintKey)}</p>
+            <h2 className="text-lg font-semibold tracking-[-0.01em] text-foreground text-balance">{t(step.titleKey)}</h2>
+            <p className="text-sm text-muted-foreground text-pretty">{t(step.hintKey)}</p>
           </div>
 
           {step.id === 'ai' && (
@@ -649,14 +653,14 @@ export default function SetupPage() {
                 </div>
               )}
               <div className="flex flex-col gap-4 sm:flex-row">
-                <label className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-8 text-center hover:bg-neutral-100">
-                  <Upload className="size-5 text-neutral-500" />
-                  <span className="text-sm font-semibold text-neutral-900">{state.cvFileName || t('setup.cvChoose')}</span>
-                  <span className="text-xs text-neutral-500">{t('setup.cvParsedHint')}</span>
+                <label className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-8 text-center hover:border-primary/40 hover:bg-primary/[0.04] motion-safe:transition-colors focus-within:ring-2 focus-within:ring-ring">
+                  <Upload className="size-5 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-foreground">{state.cvFileName || t('setup.cvChoose')}</span>
+                  <span className="text-xs text-muted-foreground">{t('setup.cvParsedHint')}</span>
                   <input
                     type="file"
                     accept=".pdf,.txt,.md"
-                    className="hidden"
+                    className="sr-only"
                     onChange={(e) => {
                       const file = e.target.files?.[0] || null;
                       patch({ cvFile: file, cvFileName: file?.name || '' });
@@ -766,9 +770,10 @@ export default function SetupPage() {
                         key={source.id}
                         type="button"
                         onClick={() => toggleActor(source.actorId)}
+                        aria-pressed={active}
                         className={cn(
-                          'rounded-lg border px-3 py-2 text-left text-sm transition-colors',
-                          active ? 'border-blue-500 bg-blue-50 text-blue-900' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                          'rounded-xl border px-3 py-2 text-left text-sm motion-safe:transition-colors motion-safe:duration-150 touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                          active ? 'border-primary/50 bg-primary/[0.08] text-foreground' : 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/25'
                         )}
                       >
                         <span>{source.name}</span>
@@ -798,9 +803,10 @@ export default function SetupPage() {
                               key={source.id}
                               type="button"
                               onClick={() => toggleFree(source.id)}
+                              aria-pressed={active}
                               className={cn(
-                                'rounded-lg border px-3 py-2 text-left text-sm transition-colors',
-                                active ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                                'rounded-xl border px-3 py-2 text-left text-sm motion-safe:transition-colors motion-safe:duration-150 touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                active ? 'border-emerald-600/30 bg-emerald-600/[0.08] text-foreground' : 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/25'
                               )}
                             >
                               <span>{source.name}</span>
@@ -820,14 +826,14 @@ export default function SetupPage() {
                 <SecretInput id="setup-techmap-key" label={t('settings.freeTechmapKey')} value={state.techmapKey} onChange={(value) => patch({ techmapKey: value })} fieldName="rorilo-setup-techmap-key" />
               </div>
 
-              <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 p-4">
+              <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/40 p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-neutral-600 ring-1 ring-neutral-200">
-                    <ImageIcon className="size-4" />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/[0.08] text-primary">
+                    <ImageIcon className="size-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-neutral-900">{t('setup.logoTitle')}</p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+                    <p className="text-sm font-semibold text-foreground">{t('setup.logoTitle')}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                       {t('setup.logoDesc')}
                     </p>
                     {state.hasLogoToken && (
@@ -846,10 +852,10 @@ export default function SetupPage() {
                   href="https://www.logo.dev/dashboard/api-keys"
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-950 hover:underline"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/25 motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <span>{t('settings.logoOpenDashboard')}</span>
-                  <ExternalLink className="size-3.5" />
+                  <ExternalLink className="size-3.5" aria-hidden="true" />
                 </a>
                 <SecretInput
                   id="setup-logo-token"
@@ -909,16 +915,16 @@ export default function SetupPage() {
             </div>
           )}
 
-          {error && <p className="mt-4 text-sm font-medium text-red-600">{error}</p>}
+          {error && <p role="alert" className="mt-4 text-sm font-medium text-destructive">{error}</p>}
 
-          <div className="mt-6 flex flex-col gap-3 border-t border-neutral-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
               variant="outline"
               onClick={() => setStepIndex((current) => Math.max(0, current - 1))}
               disabled={stepIndex === 0 || saving}
             >
-              <ArrowLeft className="size-4" />
+              <ArrowLeft className="size-4" aria-hidden="true" />
               {t('setup.back')}
             </Button>
             <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -928,7 +934,7 @@ export default function SetupPage() {
                 </Button>
               )}
               <Button type="button" onClick={saveCurrentStep} disabled={saving}>
-                {saving ? <Loader2 className="size-4 animate-spin" /> : stepIndex === STEPS.length - 1 ? <Check className="size-4" /> : <ArrowRight className="size-4" />}
+                {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : stepIndex === STEPS.length - 1 ? <Check className="size-4" aria-hidden="true" /> : <ArrowRight className="size-4" aria-hidden="true" />}
                 {stepIndex === STEPS.length - 1 ? t('setup.saveFinish') : t('setup.saveContinue')}
               </Button>
             </div>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ExternalLink, Loader2, Building2, BookmarkCheck, FileText, Send, Gauge } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { JobCard } from '@/components/JobCard';
+import { JobDrawer } from '@/components/JobDrawer';
 import { CompanyLogo } from '@/components/CompanyLogo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ export default function CompanyPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [drawerJobId, setDrawerJobId] = useState<string | null>(null);
 
   const fetchCompany = useCallback(async () => {
     if (!companyParam) return;
@@ -100,7 +102,7 @@ export default function CompanyPage() {
         }
       />
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 md:p-10">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 sm:px-6 lg:px-8 py-6 md:py-8 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150">
         <Card size="sm">
           <CardContent className="flex flex-wrap gap-4">
             {stats.map((stat) => {
@@ -166,10 +168,23 @@ export default function CompanyPage() {
                   jobs: current.jobs.filter((item: any) => item.id !== jobId),
                 }));
               }}
+              onOpen={setDrawerJobId}
             />
           ))}
         </div>
       </main>
+
+      <JobDrawer
+        jobId={drawerJobId}
+        onClose={() => setDrawerJobId(null)}
+        onChanged={fetchCompany}
+        onDeleted={(jobId) => {
+          setData((current: any) => ({
+            ...current,
+            jobs: current.jobs.filter((item: any) => item.id !== jobId),
+          }));
+        }}
+      />
     </div>
   );
 }

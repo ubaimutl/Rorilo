@@ -1,21 +1,33 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist_Mono, Varela_Round, Quattrocento_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const bodySans = Quattrocento_Sans({
+  variable: "--font-body-sans",
   subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const varelaRound = Varela_Round({
+  variable: "--font-varela-round",
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
 });
 
 import { Sidebar } from "@/components/Sidebar";
 import { I18nProvider } from "@/components/I18nProvider";
 import { FirstRunSetupDialog } from "@/components/FirstRunSetupDialog";
 import { AppNotifications } from "@/components/AppNotifications";
+import { CommandPalette } from "@/components/CommandPalette";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 
 export const metadata: Metadata = {
   title: "Rorilo - Local-First AI Job Search & Application Assistant",
@@ -32,6 +44,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f5f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#1e222e" },
+  ],
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -40,10 +60,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bodySans.variable} ${geistMono.variable} ${varelaRound.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col md:flex-row bg-background text-foreground font-sans">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+        >
+          Skip to main content
+        </a>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -55,12 +81,15 @@ export default function RootLayout({
           }}
         />
         <I18nProvider>
+          <ConfirmProvider>
           <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+          <div id="main-content" className="flex-1 flex flex-col min-w-0 min-h-screen scroll-mt-16 pb-20 md:pb-0">
             <FirstRunSetupDialog />
             {children}
           </div>
+          <CommandPalette />
           <AppNotifications />
+          </ConfirmProvider>
         </I18nProvider>
       </body>
     </html>

@@ -36,6 +36,9 @@ model CV {
   id               String   @id @default(cuid())
   originalFilename String
   filePath         String?
+  fileData         Bytes?
+  mimeType         String?
+  fileSize         Int?
   extractedText    String
   structuredData   String   @default("{}") // JSON object
   isActive         Boolean  @default(true)

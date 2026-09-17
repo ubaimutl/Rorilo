@@ -70,7 +70,7 @@ export function CompanyLogo({
           color: `hsl(${hue} 45% 30%)`,
         }}
         className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded-full font-bold select-none',
+          'inline-flex shrink-0 items-center justify-center rounded-[10px] font-bold select-none ring-1 ring-black/[0.06]',
           className
         )}
       >
@@ -89,7 +89,7 @@ export function CompanyLogo({
       loading="lazy"
       style={{ width: size, height: size }}
       onError={() => setAttempt((current) => current + 1)}
-      className={cn('shrink-0 rounded-full bg-white object-contain', className)}
+      className={cn('shrink-0 rounded-[10px] bg-white object-contain ring-1 ring-black/[0.06]', className)}
     />
   );
 }

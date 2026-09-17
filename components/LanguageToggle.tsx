@@ -22,8 +22,8 @@ export function LanguageToggle({ compact = false }: { compact?: boolean }) {
         title={`${t('language.switchTo')}: ${nextLocale.label}`}
       >
         <span className="relative flex size-5 items-center justify-center">
-          <Languages className="size-4 text-neutral-500" />
-          <span className="absolute -bottom-1 -right-1 rounded bg-sidebar px-0.5 text-[9px] leading-3 text-sidebar-foreground">
+          <Languages className="size-4 opacity-60" />
+          <span className="absolute -bottom-1 -right-1 rounded bg-sidebar-accent px-0.5 text-[9px] leading-3 text-sidebar-accent-foreground">
             {currentLocale.shortLabel}
           </span>
         </span>
@@ -35,7 +35,7 @@ export function LanguageToggle({ compact = false }: { compact?: boolean }) {
     <label
       className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-primary"
     >
-      <Languages className="size-4 shrink-0 text-neutral-500" />
+      <Languages className="size-4 shrink-0 opacity-60" />
       <span className="sr-only">{t('language.label')}</span>
       <select
         value={locale}
