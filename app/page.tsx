@@ -423,6 +423,34 @@ export default function JobsPage() {
 							</div>
 						</div>
 
+						{triageCounts.UNSCORED > 0 && profileReady && (
+							<div className="rounded-3xl bg-primary text-primary-foreground p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+								<div className="flex-1 min-w-0">
+									<p className="font-bold tracking-tight text-lg">
+										{t("discover.hero.review", { count: triageCounts.UNSCORED })}
+									</p>
+									<p className="mt-0.5 text-sm opacity-70">
+										{t("discover.unscoredBacklogDescription")}
+									</p>
+								</div>
+								<Button
+									type="button"
+									variant="secondary"
+									size="lg"
+									onClick={handleTriageVisible}
+									disabled={triaging}
+									className="shrink-0"
+								>
+									{triaging ? (
+										<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+									) : (
+										<Sparkles className="size-4" aria-hidden="true" />
+									)}
+									{t("discover.sortVisible")}
+								</Button>
+							</div>
+						)}
+
 						<div className="flex flex-col gap-4">
 							<div className="flex items-center justify-between gap-3">
 								<div role="group" aria-label="Filter roles" className="flex gap-2 overflow-x-auto -mx-1 px-1 py-0.5">
@@ -574,34 +602,6 @@ export default function JobsPage() {
 									))}
 								</div>
 							</>
-						)}
-
-						{triageCounts.UNSCORED > 0 && profileReady && (
-							<div className="rounded-3xl bg-primary text-primary-foreground p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-								<div className="flex-1 min-w-0">
-									<p className="font-bold tracking-tight text-lg">
-										{t("discover.hero.review", { count: triageCounts.UNSCORED })}
-									</p>
-									<p className="mt-0.5 text-sm opacity-70">
-										{t("discover.unscoredBacklogDescription")}
-									</p>
-								</div>
-								<Button
-									type="button"
-									variant="secondary"
-									size="lg"
-									onClick={handleTriageVisible}
-									disabled={triaging}
-									className="shrink-0"
-								>
-									{triaging ? (
-										<Loader2 className="size-4 animate-spin" aria-hidden="true" />
-									) : (
-										<Sparkles className="size-4" aria-hidden="true" />
-									)}
-									{t("discover.sortVisible")}
-								</Button>
-							</div>
 						)}
 					</>
 				)}
