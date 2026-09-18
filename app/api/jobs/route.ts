@@ -5,6 +5,127 @@ import { withStoredLogo } from '@/lib/logo';
 import { rememberDeletedJobs } from '@/lib/jobs/deleted-fingerprints';
 import { attachSourceSummary } from '@/lib/jobs/source-history';
 import { hasMatchProfile } from '@/lib/setup/readiness';
+import { computeJobHash } from '@/lib/jobs/deduplicate';
+import { validateManualDescription } from '@/lib/jobs/manual-description';
+
+const REMOTE_TYPES = new Set(['remote', 'hybrid', 'onsite', 'unknown']);
+
+function cleanStr(value: unknown, max: number): string {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function cleanUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withProto);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return url.toString().slice(0, 2000);
+  } catch {
+    return null;
+  }
+}
+
+/** POST /api/jobs — save a job found elsewhere so documents can be prepared for it. */
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+    const title = cleanStr(body.title, 200);
+    const company = cleanStr(body.company, 200);
+    if (!title || !company) {
+      return NextResponse.json(
+        { error: 'Job title and company are required' },
+        { status: 400 }
+      );
+    }
+
+    const location = cleanStr(body.location, 200) || null;
+    const remoteType =
+      typeof body.remoteType === 'string' && REMOTE_TYPES.has(body.remoteType)
+        ? body.remoteType
+        : 'unknown';
+    const employmentType = cleanStr(body.employmentType, 50) || null;
+
+    const toNum = (v: unknown): number | null => {
+      const n = typeof v === 'string' && v.trim() === '' ? NaN : Number(v);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
+    const salaryMin = toNum(body.salaryMin);
+    const salaryMax = toNum(body.salaryMax);
+    const salaryCurrency =
+      salaryMin !== null || salaryMax !== null
+        ? cleanStr(body.salaryCurrency, 3).toUpperCase() || 'USD'
+        : null;
+
+    const descValidation = validateManualDescription(
+      typeof body.description === 'string' ? body.description : ''
+    );
+    if (!descValidation.ok) {
+      return NextResponse.json(
+        {
+          error:
+            descValidation.error === 'TOO_LONG'
+              ? 'Description is too long (max 20,000 characters)'
+              : 'Please paste at least a short description (min 50 characters) so matching and documents have something to work with',
+        },
+        { status: 422 }
+      );
+    }
+
+    const url = cleanUrl(body.url ?? body.applicationUrl);
+    if (body.url !== undefined && body.url !== null && String(body.url).trim() !== '' && !url) {
+      return NextResponse.json({ error: 'Posting URL does not look valid' }, { status: 400 });
+    }
+
+    const hash = computeJobHash({
+      title,
+      company,
+      location: location ?? undefined,
+      remoteType: remoteType as 'remote' | 'hybrid' | 'onsite' | 'unknown',
+      applicationUrl: url ?? undefined,
+    });
+    const existing = await prisma.job.findUnique({
+      where: { deduplicationHash: hash },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json({ success: true, duplicate: true, job: { id: existing.id } });
+    }
+
+    const job = await prisma.job.create({
+      data: {
+        source: 'manual',
+        deduplicationHash: hash,
+        title,
+        company,
+        location,
+        remoteType,
+        employmentType,
+        salaryMin,
+        salaryMax,
+        salaryCurrency,
+        description: descValidation.value,
+        applicationUrl: url,
+        originalUrl: url,
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ success: true, duplicate: false, job: { id: job.id } });
+  } catch (error) {
+    // Unique-hash race: another request created the same job concurrently.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ success: true, duplicate: true, job: { id: null } });
+    }
+    return NextResponse.json(
+      { error: (error as Error).message || 'Failed to save job' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET(req: Request) {
   try {

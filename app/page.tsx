@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { JobDrawer } from "@/components/JobDrawer";
+import { AddJobDialog } from "@/components/AddJobDialog";
 import { SearchModal } from "@/components/SearchModal";
 import { SearchInsights } from "@/components/SearchInsights";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,7 @@ export default function JobsPage() {
 	);
 	const [triageFilter, setTriageFilter] = useState<TriageFilter>("all");
 	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+	const [isAddJobOpen, setIsAddJobOpen] = useState(false);
 	const [drawerJobId, setDrawerJobId] = useState<string | null>(null);
 	const [bulkDeleting, setBulkDeleting] = useState(false);
 	const [triaging, setTriaging] = useState(false);
@@ -379,10 +381,16 @@ export default function JobsPage() {
 									{heroSub}
 								</p>
 							</div>
-							<Button size="lg" onClick={() => setIsSearchModalOpen(true)} className="shrink-0 w-full sm:w-auto">
-								<Plus className="size-4" aria-hidden="true" />
-								{t("discover.findRoles")}
-							</Button>
+							<div className="flex shrink-0 flex-col sm:flex-row gap-2 w-full sm:w-auto">
+								<Button variant="outline" size="lg" onClick={() => setIsAddJobOpen(true)} className="w-full sm:w-auto">
+									<Plus className="size-4" aria-hidden="true" />
+									{t("addjob.add")}
+								</Button>
+								<Button size="lg" onClick={() => setIsSearchModalOpen(true)} className="w-full sm:w-auto">
+									<Search className="size-4" aria-hidden="true" />
+									{t("discover.findRoles")}
+								</Button>
+							</div>
 						</div>
 
 						<div className="rounded-3xl bg-card border border-border p-2 shadow-[0_8px_32px_-20px_rgba(19,20,23,0.3)] flex flex-col sm:flex-row sm:items-center gap-2">
@@ -632,6 +640,17 @@ export default function JobsPage() {
 				onClose={() => setDrawerJobId(null)}
 				onChanged={() => fetchJobs()}
 				onDeleted={(jobId) => handleDeleteJob(jobId)}
+			/>
+
+			<AddJobDialog
+				open={isAddJobOpen}
+				onClose={() => setIsAddJobOpen(false)}
+				onAdded={(jobId) => {
+					setIsAddJobOpen(false);
+					setTriageFilter("all");
+					fetchJobs();
+					if (jobId) setDrawerJobId(jobId);
+				}}
 			/>
 		</div>
 	);
