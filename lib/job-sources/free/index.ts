@@ -2,18 +2,21 @@ import type { JobSearchParams, JobSourceSearchResult } from '../types';
 import { searchArbeitsagentur } from './arbeitsagentur';
 import { searchAdzuna } from './adzuna';
 import { searchTechmap } from './techmap';
+import { searchStepstone } from './stepstone';
+import { searchXing } from './xing';
 import { searchAtsBoards } from './ats';
 import { getEffectiveAtsBoards } from './config';
 import { searchArbeitnow, searchJobicy, searchRemoteOk, searchRemotive } from './remote';
 import { normalizeCountryCode, sourceCoveragePriority, type SourceCoverage } from '../countries';
 
-export type FreeSourceGroup = 'direct' | 'remote' | 'boards' | 'keyed';
+export type FreeSourceGroup = 'direct' | 'remote' | 'boards' | 'keyed' | 'scrape';
 
 export const FREE_SOURCE_GROUPS: Array<{ id: FreeSourceGroup; label: string; hint: string }> = [
   { id: 'remote', label: 'Remote feeds', hint: 'remote-only boards, cached politely' },
   { id: 'boards', label: 'Company boards', hint: 'career pages, managed in Settings' },
   { id: 'direct', label: 'Country feeds', hint: 'official and country-specific feeds' },
   { id: 'keyed', label: 'Keyed APIs', hint: 'free allowances, keys in Settings' },
+  { id: 'scrape', label: 'Direct scrapes', hint: 'plain-HTML fetching, no keys — may stop working if a site redesigns or blocks bots' },
 ];
 
 export interface FreeSourceDef {
@@ -111,6 +114,28 @@ export const FREE_SOURCES: Record<string, FreeSourceDef> = {
     needsKey: true,
     group: 'keyed',
     run: searchTechmap,
+  },
+  stepstone: {
+    id: 'stepstone',
+    name: 'StepStone',
+    tagline: 'Direct HTML scrape, full postings, no keys needed — may break if the site redesigns',
+    coverage: { countries: ['DE'] },
+    cost: 'Free',
+    needsKey: false,
+    group: 'scrape',
+    recommendedFor: ['DE'],
+    run: searchStepstone,
+  },
+  xing: {
+    id: 'xing',
+    name: 'Xing Jobs',
+    tagline: 'Direct HTML scrape, full postings, no keys needed — may break if the site redesigns',
+    coverage: { countries: ['DE', 'AT', 'CH'] },
+    cost: 'Free',
+    needsKey: false,
+    group: 'scrape',
+    recommendedFor: ['DE'],
+    run: searchXing,
   },
 };
 

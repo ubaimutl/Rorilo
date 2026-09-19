@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeAdzunaJob } from '../lib/job-sources/free/adzuna';
+import { stepstoneSearchUrl, parseListItem, extractJobPosting, normalizeStepstoneDetail } from '../lib/job-sources/free/stepstone';
+import { xingSearchUrl, parseTeaser, parseDetail, normalizeXingJob } from '../lib/job-sources/free/xing';
 import { normalizeTechmapJob } from '../lib/job-sources/free/techmap';
 import { resolveFreeSource, FREE_SOURCES, FREE_SOURCE_GROUPS, orderFreeSources } from '../lib/job-sources/free';
 import { keywordTokens, matchesKeywords, remoteLocationKeeps } from '../lib/job-sources/free/utils';
@@ -11,12 +13,76 @@ import { parsePersonioXml, personioBaseUrl, normalizePersonio } from '../lib/job
 import { resolveSourceAdapter } from '../lib/job-sources/sources';
 
 describe('Free source registry', () => {
-  it('exposes the eight free sources', () => {
+  it('exposes the ten free sources', () => {
     expect(Object.keys(FREE_SOURCES).sort()).toEqual(
-      ['adzuna', 'arbeitnow', 'arbeitsagentur', 'ats', 'jobicy', 'remoteok', 'remotive', 'techmap']
+      ['adzuna', 'arbeitnow', 'arbeitsagentur', 'ats', 'jobicy', 'remoteok', 'remotive', 'stepstone', 'techmap', 'xing']
     );
     expect(resolveFreeSource('ATS')?.name).toBe('Company boards');
     expect(resolveFreeSource('nope')).toBeNull();
+  });
+});
+
+describe('StepStone scraper', () => {
+  it('builds search urls from keywords and location', () => {
+    expect(stepstoneSearchUrl('Frontend Engineer', 'Berlin')).toBe(
+      'https://www.stepstone.de/jobs/frontend-engineer/in-berlin/'
+    );
+    expect(stepstoneSearchUrl('  ', '')).toBe('https://www.stepstone.de/jobs/jobs/');
+  });
+
+  it('parses list items via stable hooks', () => {
+    const block = `<div data-testid="job-item"><a data-genesis-element="ANCHOR" href="/stellenangebote--Test-m-w-d-Berlin-Foo--123-inline.html" data-testid="job-item-title" data-at="job-item-title"><div>Test Engineer (m/w/d)</div></a><div data-at="job-item-company-name">Foo GmbH</div><div data-at="job-item-location">Berlin</div></div>`;
+    const item = parseListItem(block);
+    expect(item?.title).toBe('Test Engineer (m/w/d)');
+    expect(item?.detailUrl).toBe('https://www.stepstone.de/stellenangebote--Test-m-w-d-Berlin-Foo--123-inline.html');
+    expect(item?.company).toBe('Foo GmbH');
+    expect(item?.location).toBe('Berlin');
+  });
+
+  it('extracts schema.org postings and normalizes them', () => {
+    const posting = extractJobPosting(
+      `<script type="application/ld+json">{"@type":"JobPosting","title":"Dev","description":"<p>React work</p>","datePosted":"2026-09-01","employmentType":"FULL_TIME","hiringOrganization":{"@type":"Organization","name":"Acme"},"jobLocation":{"@type":"Place","address":{"addressLocality":"Berlin","addressCountry":"DE"}}}</script>`
+    );
+    expect(posting?.title).toBe('Dev');
+    const job = normalizeStepstoneDetail(
+      { title: 'Dev', detailUrl: 'https://www.stepstone.de/x', company: '', location: '', timeago: '' },
+      posting
+    );
+    expect(job.source).toBe('stepstone');
+    expect(job.company).toBe('Acme');
+    expect(job.location).toBe('Berlin, DE');
+    expect(job.employmentType).toBe('full-time');
+    expect(job.technologies).toContain('React');
+  });
+});
+
+describe('Xing scraper', () => {
+  it('builds search urls from keywords and location', () => {
+    expect(xingSearchUrl('frontend', 'Berlin')).toBe(
+      'https://www.xing.com/jobs/search?keywords=frontend&location=Berlin'
+    );
+  });
+
+  it('parses teasers via stable hooks', () => {
+    const block = `<article data-testid="job-search-result" aria-label="Frontend Engineer. Klicke zum Öffnen"><a href="/jobs/berlin-frontend-engineer-123" aria-label="Frontend Engineer" tabindex="0"></a><h2 data-testid="job-teaser-list-title">Frontend Engineer</h2><p data-xds="BodyCopy">Acme</p></article>`;
+    const item = parseTeaser(block);
+    expect(item?.title).toBe('Frontend Engineer');
+    expect(item?.detailUrl).toBe('https://www.xing.com/jobs/berlin-frontend-engineer-123');
+  });
+
+  it('extracts detail content and normalizes it', () => {
+    const detail = parseDetail(
+      `<div data-testid="expandable-content"><div><div><p>TypeScript and React work</p></div></div></div><div class="job-details-company-info-name">Acme GmbH</div>`
+    );
+    const job = normalizeXingJob(
+      { title: 'Frontend Engineer', detailUrl: 'https://www.xing.com/jobs/x-456', company: '', location: 'Berlin', facts: ['Vollzeit'] },
+      detail
+    );
+    expect(job.source).toBe('xing');
+    expect(job.sourceJobId).toBe('xing:456');
+    expect(job.company).toBe('Acme GmbH');
+    expect(job.employmentType).toBe('full-time');
+    expect(job.technologies).toContain('TypeScript');
   });
 });
 
