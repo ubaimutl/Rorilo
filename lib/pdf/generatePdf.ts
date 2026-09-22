@@ -64,8 +64,23 @@ export interface CoverLetterPdfData {
   template?: CoverLetterTemplate;
 }
 
+/**
+ * Strips characters that break jsPDF's standard-font metrics: control codes,
+ * zero-width/invisible markers, and exotic spaces. They render as junk glyphs
+ * with wrong widths (spaced-out, overflowing lines) instead.
+ */
+export function sanitizePdfText(raw: string | undefined | null): string {
+  if (!raw) return '';
+  return raw
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u2028\u2029\uFEFF\u2060-\u2064\u180E\u00AD]/g, '')
+    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function sanitizeContent(raw: string) {
-  let text = (raw || "").trim();
+  let text = sanitizePdfText(raw);
   let subject = "";
 
   const lines = text.split("\n");
@@ -816,9 +831,9 @@ function renderTemplateGermanDin(data: CoverLetterPdfData): jsPDF {
 
   const { subject, body } = sanitizeContent(data.content);
   const subjectText =
-    subject ||
+    sanitizePdfText(subject) ||
     (data.jobTitle
-      ? `${isGerman ? "Bewerbung als" : "Application for"} ${data.jobTitle}`
+      ? `${isGerman ? "Bewerbung als" : "Application for"} ${sanitizePdfText(data.jobTitle)}`
       : "");
 
   if (subjectText) {
@@ -835,21 +850,41 @@ function renderTemplateGermanDin(data: CoverLetterPdfData): jsPDF {
 }
 
 export function createCoverLetterDoc(data: CoverLetterPdfData): jsPDF {
-  const template = data.template || "german_din";
+  // Clean invisible/control characters from every text field once, so no
+  // template can render junk glyphs with broken metrics.
+  const clean: CoverLetterPdfData = { ...data };
+  for (const key of [
+    'candidateName',
+    'candidateTitle',
+    'candidateEmail',
+    'candidatePhone',
+    'candidateLocation',
+    'candidateLinks',
+    'companyName',
+    'companyAddress',
+    'contactPerson',
+    'jobTitle',
+    'content',
+    'date',
+  ] as const) {
+    const value = clean[key];
+    if (typeof value === 'string') clean[key] = sanitizePdfText(value) as never;
+  }
+  const template = clean.template || "german_din";
   switch (template) {
     case "german_din":
-      return renderTemplateGermanDin(data);
+      return renderTemplateGermanDin(clean);
     case "editorial":
-      return renderTemplateEditorial(data);
+      return renderTemplateEditorial(clean);
     case "banner":
-      return renderTemplateBanner(data);
+      return renderTemplateBanner(clean);
     case "minimalist":
-      return renderTemplateMinimalist(data);
+      return renderTemplateMinimalist(clean);
     case "creative":
-      return renderTemplateCreative(data);
+      return renderTemplateCreative(clean);
     case "modern":
     default:
-      return renderTemplateModern(data);
+      return renderTemplateModern(clean);
   }
 }
 

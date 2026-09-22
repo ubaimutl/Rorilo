@@ -154,8 +154,26 @@ async function fetchText(url: string, timeoutMs = 15000): Promise<string> {
     });
     if (!res.ok) throw new Error(`Xing responded with status ${res.status}`);
     return await res.text();
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      throw new Error('Xing took too long to respond (timeout). Please try again.');
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+/** List fetch with one retry — search pages are heavy and occasionally stall. */
+async function fetchListHtml(url: string): Promise<string> {
+  try {
+    return await fetchText(url, 30000);
+  } catch (err) {
+    if ((err as Error).message.includes('too long')) {
+      await new Promise((r) => setTimeout(r, 1500));
+      return await fetchText(url, 30000);
+    }
+    throw err;
   }
 }
 
@@ -178,7 +196,7 @@ export async function searchXing(params: JobSearchParams): Promise<JobSourceSear
   const location = (params.location || '').trim();
   const url = xingSearchUrl(keywords, location);
 
-  const html = await fetchText(url);
+  const html = await fetchListHtml(url);
   const items = splitTeasers(html)
     .map(parseTeaser)
     .filter((x): x is XingListItem => x !== null)
