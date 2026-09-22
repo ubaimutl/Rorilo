@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { cleanInvisibleText } from "@/lib/text/clean";
 
 export type CoverLetterTemplate = "modern" | "editorial" | "banner" | "minimalist" | "creative" | "german_din";
 
@@ -70,13 +71,7 @@ export interface CoverLetterPdfData {
  * with wrong widths (spaced-out, overflowing lines) instead.
  */
 export function sanitizePdfText(raw: string | undefined | null): string {
-  if (!raw) return '';
-  return raw
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u2028\u2029\uFEFF\u2060-\u2064\u180E\u00AD]/g, '')
-    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return cleanInvisibleText(raw);
 }
 
 function sanitizeContent(raw: string) {

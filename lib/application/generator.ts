@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getAIProvider } from '../ai/openai-compatible';
+import { cleanInvisibleText } from '../text/clean';
 import { Job, UserProfile, JobPreference, CV } from '@prisma/client';
 
 export const GeneratedApplicationMaterialsSchema = z.object({
@@ -241,15 +242,17 @@ function normalizeMaterialsLanguage(
   materials: GeneratedApplicationMaterials,
   language: string
 ): GeneratedApplicationMaterials {
+  const clean = (text: string) =>
+    cleanInvisibleText(normalizeLanguageMarkers(text, language));
   return {
     ...materials,
-    coverLetter: normalizeLanguageMarkers(materials.coverLetter, language),
-    emailSubject: normalizeLanguageMarkers(materials.emailSubject, language),
-    emailBody: normalizeLanguageMarkers(materials.emailBody, language),
-    shortIntroduction: normalizeLanguageMarkers(materials.shortIntroduction, language),
+    coverLetter: clean(materials.coverLetter),
+    emailSubject: clean(materials.emailSubject),
+    emailBody: clean(materials.emailBody),
+    shortIntroduction: clean(materials.shortIntroduction),
     answersToCommonQuestions: materials.answersToCommonQuestions.map((item) => ({
-      question: normalizeLanguageMarkers(item.question, language),
-      answer: normalizeLanguageMarkers(item.answer, language),
+      question: clean(item.question),
+      answer: clean(item.answer),
     })),
   };
 }
