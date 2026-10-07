@@ -32,6 +32,7 @@ import {
 	Cpu,
 	FileText,
 	Plus,
+	X,
 } from "lucide-react";
 import { useI18n } from "@/components/I18nProvider";
 
@@ -65,6 +66,8 @@ export default function JobsPage() {
 	const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 	const [isAddJobOpen, setIsAddJobOpen] = useState(false);
 	const [drawerJobId, setDrawerJobId] = useState<string | null>(null);
+	const [selecting, setSelecting] = useState(false);
+	const [selectedIds, setSelectedIds] = useState<string[]>([]);
 	const [bulkDeleting, setBulkDeleting] = useState(false);
 	const [triaging, setTriaging] = useState(false);
 	const [triageError, setTriageError] = useState<string | null>(null);
@@ -243,10 +246,62 @@ export default function JobsPage() {
 		return () => clearTimeout(handler);
 	}, [fetchJobs, hasRestoredState]);
 
+	const toggleSelect = useCallback((jobId: string) => {
+		setSelectedIds((current) =>
+			current.includes(jobId)
+				? current.filter((id) => id !== jobId)
+				: [...current, jobId],
+		);
+	}, []);
+
 	// Stable callbacks keep memoized cards from re-rendering on every keystroke.
 	const handleSaveToggle = useCallback(() => {
 		fetchJobs();
 	}, [fetchJobs]);
+
+	const exitSelecting = useCallback(() => {
+		setSelecting(false);
+		setSelectedIds([]);
+	}, []);
+
+	const handleDeleteSelected = async () => {
+		if (selectedIds.length === 0) return;
+		const ok = await confirm({
+			title: t("discover.deleteConfirmSelected", {
+				count: selectedIds.length,
+				plural: selectedIds.length === 1 ? "" : "s",
+			}),
+			confirmLabel: t("discover.deleteSelected"),
+			tone: "danger",
+		});
+		if (!ok) return;
+
+		setBulkDeleting(true);
+		setDeleteError(null);
+		try {
+			const idsToDelete = [...selectedIds];
+			const res = await fetch("/api/jobs", {
+				method: "DELETE",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ ids: idsToDelete }),
+			});
+			const data = await res.json().catch(() => ({}));
+			if (res.ok) {
+				setJobs((current) =>
+					current.filter((job) => !idsToDelete.includes(job.id)),
+				);
+				exitSelecting();
+				fetchJobs();
+			} else {
+				setDeleteError(data.error || t("discover.deleteSelectedFailed"));
+			}
+		} catch (err) {
+			setDeleteError((err as Error).message);
+			console.error(err);
+		} finally {
+			setBulkDeleting(false);
+		}
+	};
 
 	const handleDeleteJob = useCallback((jobId: string) => {
 		cachedJobs = (cachedJobs || []).filter((item: any) => item.id !== jobId);
@@ -509,9 +564,23 @@ export default function JobsPage() {
 							</div>
 
 							<div className="flex items-center justify-between gap-3">
-								<h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-									{t("discover.caption.top")}
-								</h2>
+								<div className="flex items-center gap-2 min-w-0">
+									<h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+										{t("discover.caption.top")}
+									</h2>
+									<button
+										type="button"
+										onClick={() => (selecting ? exitSelecting() : setSelecting(true))}
+										aria-pressed={selecting}
+										className={`inline-flex shrink-0 items-center h-8 px-3 rounded-full text-[13px] font-medium touch-manipulation motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+											selecting
+												? "bg-primary text-primary-foreground font-semibold"
+												: "text-muted-foreground hover:text-foreground hover:bg-muted"
+										}`}
+									>
+										{selecting ? t("common.done") : t("discover.select")}
+									</button>
+								</div>
 								<Tabs
 									value={activeTab}
 									onValueChange={(value) =>
@@ -606,6 +675,9 @@ export default function JobsPage() {
 											onSaveToggle={handleSaveToggle}
 											onDelete={handleDeleteJob}
 											onOpen={setDrawerJobId}
+											selected={selectedIds.includes(job.id)}
+											selectMode={selecting}
+											onSelectToggle={toggleSelect}
 										/>
 									))}
 								</div>
@@ -652,6 +724,55 @@ export default function JobsPage() {
 					if (jobId) setDrawerJobId(jobId);
 				}}
 			/>
+
+			{selecting && (
+				<div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-150">
+					<div
+						role="toolbar"
+						aria-label={t("discover.selected", { count: selectedIds.length })}
+						className="flex items-center gap-1 rounded-full border border-border bg-primary text-primary-foreground pl-4 pr-2 py-2 shadow-[0_16px_48px_-16px_rgba(19,20,23,0.5)]"
+					>
+						<span aria-live="polite" className="text-sm font-semibold tabular-nums whitespace-nowrap">
+							{t("discover.selected", { count: selectedIds.length })}
+						</span>
+						<button
+							type="button"
+							onClick={() => {
+								const visibleIds = visibleJobs.map((job) => job.id);
+								const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+								setSelectedIds(allSelected ? [] : visibleIds);
+							}}
+							className="h-9 px-3 rounded-full text-[13px] font-medium opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-black/10 touch-manipulation motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+						>
+							{visibleJobs.length > 0 && visibleJobs.every((job) => selectedIds.includes(job.id))
+								? t("discover.clearSelection")
+								: t("discover.selectAll")}
+						</button>
+						<button
+							type="button"
+							onClick={handleDeleteSelected}
+							disabled={selectedIds.length === 0 || bulkDeleting}
+							className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-semibold bg-destructive text-white hover:opacity-90 disabled:opacity-50 touch-manipulation motion-safe:transition-opacity focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+						>
+							{bulkDeleting ? (
+								<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+							) : (
+								<Trash2 className="size-4" aria-hidden="true" />
+							)}
+							{t("discover.deleteSelected")}
+						</button>
+						<button
+							type="button"
+							onClick={exitSelecting}
+							aria-label={t("common.cancel")}
+							title={t("common.cancel")}
+							className="flex size-9 items-center justify-center rounded-full opacity-80 hover:opacity-100 hover:bg-white/10 dark:hover:bg-black/10 touch-manipulation motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+						>
+							<X className="size-4" aria-hidden="true" />
+						</button>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

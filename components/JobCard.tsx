@@ -43,9 +43,12 @@ export interface JobCardProps {
 			status: string;
 		} | null;
 	};
-	onSaveToggle?: (jobId: string, isSaved: boolean) => void;
-	onDelete?: (jobId: string) => void;
-	onOpen?: (jobId: string) => void;
+  onSaveToggle?: (jobId: string, isSaved: boolean) => void;
+  onDelete?: (jobId: string) => void;
+  onOpen?: (jobId: string) => void;
+  selected?: boolean;
+  selectMode?: boolean;
+  onSelectToggle?: (jobId: string) => void;
 }
 
 function parseJsonArray(str?: string | null): string[] {
@@ -57,7 +60,7 @@ function parseJsonArray(str?: string | null): string[] {
 	}
 }
 
-function JobCardInner({ job, onSaveToggle, onDelete, onOpen }: JobCardProps) {
+function JobCardInner({ job, onSaveToggle, onDelete, onOpen, selected = false, selectMode = false, onSelectToggle }: JobCardProps) {
 	const { t } = useI18n();
 	const confirm = useConfirm();
 	const isSaved = job.application?.status === "SAVED";
@@ -181,15 +184,26 @@ function JobCardInner({ job, onSaveToggle, onDelete, onOpen }: JobCardProps) {
 			}}
 			tabIndex={0}
 			aria-label={`${job.title} at ${job.company}${hasScore ? `, match ${score} percent` : ""}. ${t("jobcard.view")}`}
-			className={cn(
-				"rounded-3xl border border-border bg-card p-5 cursor-pointer outline-none",
-				"shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]",
-				"motion-safe:transition-colors motion-safe:duration-150 hover:border-primary/25 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring",
-				triageStatus === "SKIP" && "opacity-75",
-			)}
+      className={cn(
+        'rounded-3xl border bg-card p-5 cursor-pointer outline-none',
+        'shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]',
+        'motion-safe:transition-colors motion-safe:duration-150 hover:border-primary/25 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring',
+        triageStatus === 'SKIP' && !selected && 'opacity-75',
+        selected && 'border-primary/50 ring-1 ring-primary/30',
+      )}
 		>
-			<div className="flex items-center gap-3.5">
-				<CompanyLogo
+      <div className="flex items-center gap-3.5">
+        {selectMode && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onSelectToggle?.(job.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={t('jobcard.select', { title: job.title })}
+            className="size-5 shrink-0 rounded-md border-input cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        )}
+        <CompanyLogo
 					company={job.company}
 					website={job.companyWebsite}
 					directLogoUrl={job.companyLogo}
