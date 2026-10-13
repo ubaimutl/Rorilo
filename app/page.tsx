@@ -107,7 +107,15 @@ export default function JobsPage() {
 	const matchingPaused = jobs.length > 0 && !profileReady;
 	const hasJobs = totalJobsInDb !== null ? totalJobsInDb > 0 : jobs.length > 0;
 
+	// Locale comes from localStorage after mount; rendering the date only on
+	// the client avoids a server/client text mismatch (React hydration #418).
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
 	const dateLine = useMemo(() => {
+		if (!mounted) return "";
 		try {
 			return new Intl.DateTimeFormat(locale, {
 				weekday: "long",
@@ -117,7 +125,7 @@ export default function JobsPage() {
 		} catch {
 			return "";
 		}
-	}, [locale]);
+	}, [locale, mounted]);
 
 	const heroSub =
 		triageCounts.WORTH_APPLYING > 0
