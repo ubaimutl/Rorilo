@@ -35,25 +35,31 @@ export type SaveAISettingsInput = {
   isConfigured: boolean;
 };
 
-const AI_SETTING_COLUMNS = [
-  'ALTER TABLE "AIProviderSettings" ADD COLUMN "providerName" TEXT NOT NULL DEFAULT \'Primary\'',
-  'ALTER TABLE "AIProviderSettings" ADD COLUMN "fallbackProviders" TEXT NOT NULL DEFAULT \'[]\'',
-  'ALTER TABLE "AIProviderSettings" ADD COLUMN "structuredOutput" BOOLEAN NOT NULL DEFAULT true',
-  'ALTER TABLE "AIProviderSettings" ADD COLUMN "disableReasoning" BOOLEAN NOT NULL DEFAULT true',
-  'ALTER TABLE "AIProviderSettings" ADD COLUMN "providerOptions" TEXT NOT NULL DEFAULT \'{}\'',
+const AI_SETTING_COLUMNS: Array<{ name: string; ddl: string }> = [
+  { name: 'providerName', ddl: 'ALTER TABLE "AIProviderSettings" ADD COLUMN "providerName" TEXT NOT NULL DEFAULT \'Primary\'' },
+  { name: 'fallbackProviders', ddl: 'ALTER TABLE "AIProviderSettings" ADD COLUMN "fallbackProviders" TEXT NOT NULL DEFAULT \'[]\'' },
+  { name: 'structuredOutput', ddl: 'ALTER TABLE "AIProviderSettings" ADD COLUMN "structuredOutput" BOOLEAN NOT NULL DEFAULT true' },
+  { name: 'disableReasoning', ddl: 'ALTER TABLE "AIProviderSettings" ADD COLUMN "disableReasoning" BOOLEAN NOT NULL DEFAULT true' },
+  { name: 'providerOptions', ddl: 'ALTER TABLE "AIProviderSettings" ADD COLUMN "providerOptions" TEXT NOT NULL DEFAULT \'{}\'' },
 ];
 
 let columnsReady = false;
 
 export async function ensureAISettingsColumns(): Promise<void> {
   if (columnsReady) return;
-  for (const statement of AI_SETTING_COLUMNS) {
-    try {
-      await prisma.$executeRawUnsafe(statement);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!message.toLowerCase().includes('duplicate column')) {
-        throw error;
+  // SQLite has no ADD COLUMN IF NOT EXISTS, so check first instead of
+  // firing blind ALTERs that fail loudly on every boot.
+  const tables = await prisma.$queryRaw<Array<{ name: string }>>`
+    SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'AIProviderSettings'
+  `;
+  if (tables.length > 0) {
+    const existing = await prisma.$queryRaw<Array<{ name: string }>>`
+      SELECT name FROM pragma_table_info('AIProviderSettings')
+    `;
+    const have = new Set(existing.map((col) => col.name));
+    for (const column of AI_SETTING_COLUMNS) {
+      if (!have.has(column.name)) {
+        await prisma.$executeRawUnsafe(column.ddl);
       }
     }
   }
