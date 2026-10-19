@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bookmark, BookmarkCheck, Trash2, MapPin } from "lucide-react";
+import { Bookmark, BookmarkCheck, Trash2, MapPin, Check, Minus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import {
 	ScoreRing,
@@ -48,7 +48,7 @@ export interface JobCardProps {
   onOpen?: (jobId: string) => void;
   selected?: boolean;
   selectMode?: boolean;
-  onSelectToggle?: (jobId: string) => void;
+  onSelectToggle?: (jobId: string, extendRange?: boolean) => void;
 }
 
 function parseJsonArray(str?: string | null): string[] {
@@ -123,20 +123,22 @@ function JobCardInner({ job, onSaveToggle, onDelete, onOpen, selected = false, s
 		triageStatus === "WORTH_APPLYING"
 			? {
 					text: t("jobcard.triageWorth"),
-					className: "text-emerald-700 dark:text-emerald-300",
-					dot: "bg-emerald-500",
+					Icon: Check,
+					className:
+						"border-emerald-500/35 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
 				}
 			: triageStatus === "MAYBE"
 				? {
 						text: t("jobcard.triageMaybe"),
-						className: "text-amber-700 dark:text-amber-300",
-						dot: "bg-amber-500",
+						Icon: Minus,
+						className:
+							"border-amber-500/40 bg-amber-500/12 text-amber-800 dark:text-amber-300",
 					}
 				: triageStatus === "SKIP"
 					? {
 							text: t("jobcard.triageSkip"),
-							className: "text-destructive",
-							dot: "bg-destructive/60",
+							Icon: X,
+							className: "border-destructive/30 bg-destructive/10 text-destructive",
 						}
 					: null;
 
@@ -169,15 +171,23 @@ function JobCardInner({ job, onSaveToggle, onDelete, onOpen, selected = false, s
 
 	return (
 		<article
-			onClick={() => onOpen?.(job.id)}
+			onClick={(e) => {
+				// In select mode a card click is a selection gesture, not an open.
+				if (selectMode) {
+					onSelectToggle?.(job.id, e.shiftKey);
+					return;
+				}
+				onOpen?.(job.id);
+			}}
 			onKeyDown={(e) => {
 				const tag = (e.target as HTMLElement).tagName;
-				if (
-					e.key === "Enter" &&
-					tag !== "BUTTON" &&
-					tag !== "INPUT" &&
-					tag !== "A"
-				) {
+				if (tag === "BUTTON" || tag === "INPUT" || tag === "A") return;
+				if (selectMode && (e.key === "Enter" || e.key === " ")) {
+					e.preventDefault();
+					onSelectToggle?.(job.id, e.shiftKey);
+					return;
+				}
+				if (e.key === "Enter") {
 					e.preventDefault();
 					onOpen?.(job.id);
 				}
@@ -189,7 +199,9 @@ function JobCardInner({ job, onSaveToggle, onDelete, onOpen, selected = false, s
         'shadow-[0_12px_40px_-24px_rgba(19,20,23,0.25)]',
         'motion-safe:transition-colors motion-safe:duration-150 hover:border-primary/25 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring',
         triageStatus === 'SKIP' && !selected && 'opacity-75',
-        selected && 'border-primary/50 ring-1 ring-primary/30',
+        selectMode && 'select-none',
+        selectMode && !selected && 'hover:border-primary/40',
+        selected && 'border-primary/50 bg-primary/[0.04] ring-1 ring-primary/30',
       )}
 		>
       <div className="flex items-center gap-3.5">
@@ -197,8 +209,11 @@ function JobCardInner({ job, onSaveToggle, onDelete, onOpen, selected = false, s
           <input
             type="checkbox"
             checked={selected}
-            onChange={() => onSelectToggle?.(job.id)}
-            onClick={(e) => e.stopPropagation()}
+            onChange={() => {}}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectToggle?.(job.id, e.shiftKey);
+            }}
             aria-label={t('jobcard.select', { title: job.title })}
             className="size-5 shrink-0 rounded-md border-input cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring"
           />
@@ -253,22 +268,17 @@ function JobCardInner({ job, onSaveToggle, onDelete, onOpen, selected = false, s
 			)}
 
 			{(triageLabel || contextText) && (
-				<p className="mt-3 flex min-w-0 items-baseline gap-1.5 text-[13px] leading-relaxed">
+				<p className="mt-3 flex min-w-0 items-center gap-2 text-[13px] leading-relaxed">
 					{triageLabel && (
-						<>
-							<span
-								aria-hidden="true"
-								className={cn(
-									"size-1.5 shrink-0 self-center rounded-full",
-									triageLabel.dot,
-								)}
-							/>
-							<span
-								className={cn("shrink-0 font-semibold", triageLabel.className)}
-							>
-								{triageLabel.text}
-							</span>
-						</>
+						<span
+							className={cn(
+								"inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold leading-5",
+								triageLabel.className,
+							)}
+						>
+							<triageLabel.Icon className="size-3.5 shrink-0" aria-hidden="true" />
+							{triageLabel.text}
+						</span>
 					)}
 					{contextText && (
 						<span className="min-w-0 flex-1 truncate text-muted-foreground">

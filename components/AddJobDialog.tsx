@@ -23,8 +23,35 @@ interface AddJobDialogProps {
   onAdded: (jobId: string | null) => void;
 }
 
+type AddMode = 'normal' | 'ai';
+
+/** Saves a job through the shared API, then scores it (best effort). Returns the job id. */
+async function postJob(payload: Record<string, unknown>): Promise<string | null> {
+  const res = await fetch('/api/jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) {
+    throw new Error(data.error || 'Failed to save job');
+  }
+  const newId: string | null = data.job?.id ?? null;
+  // Score it right away so it lands in the queue with a match (best effort).
+  if (newId) {
+    try {
+      await fetch(`/api/jobs/${newId}/analyze`, { method: 'POST' });
+    } catch {
+      /* matching can run later via Sort visible */
+    }
+  }
+  return newId;
+}
+
 export function AddJobDialog({ open, onClose, onAdded }: AddJobDialogProps) {
   const { t } = useI18n();
+  const [mode, setMode] = useState<AddMode>('normal');
+  const [pasted, setPasted] = useState('');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -38,6 +65,7 @@ export function AddJobDialog({ open, onClose, onAdded }: AddJobDialogProps) {
   const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
+    setPasted('');
     setUrl('');
     setTitle('');
     setCompany('');
@@ -64,35 +92,17 @@ export function AddJobDialog({ open, onClose, onAdded }: AddJobDialogProps) {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: url.trim() || undefined,
-          title: title.trim(),
-          company: company.trim(),
-          location: location.trim() || undefined,
-          remoteType,
-          salaryMin: salaryMin.trim() === '' ? undefined : Number(salaryMin),
-          salaryMax: salaryMax.trim() === '' ? undefined : Number(salaryMax),
-          salaryCurrency: currency.trim() || undefined,
-          description,
-        }),
+      const newId = await postJob({
+        url: url.trim() || undefined,
+        title: title.trim(),
+        company: company.trim(),
+        location: location.trim() || undefined,
+        remoteType,
+        salaryMin: salaryMin.trim() === '' ? undefined : Number(salaryMin),
+        salaryMax: salaryMax.trim() === '' ? undefined : Number(salaryMax),
+        salaryCurrency: currency.trim() || undefined,
+        description,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.success === false) {
-        setError(data.error || 'Failed to save job');
-        return;
-      }
-      const newId: string | null = data.job?.id ?? null;
-      // Score it right away so it lands in the queue with a match (best effort).
-      if (newId) {
-        try {
-          await fetch(`/api/jobs/${newId}/analyze`, { method: 'POST' });
-        } catch {
-          /* matching can run later via Sort visible */
-        }
-      }
       reset();
       onAdded(newId);
     } catch (err) {
@@ -102,6 +112,50 @@ export function AddJobDialog({ open, onClose, onAdded }: AddJobDialogProps) {
     }
   };
 
+  const handleAiSave = async () => {
+    if (saving || !pasted.trim()) return;
+    setError(null);
+    setSaving(true);
+    try {
+      const res = await fetch('/api/jobs/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: pasted }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || 'The AI could not read this posting');
+      }
+      const extracted = data.job;
+      if (!extracted.title || !extracted.company) {
+        throw new Error(t('addjob.required'));
+      }
+      const newId = await postJob({
+        url: extracted.url || undefined,
+        title: extracted.title,
+        company: extracted.company,
+        location: extracted.location || undefined,
+        remoteType: extracted.remoteType,
+        employmentType: extracted.employmentType || undefined,
+        salaryMin: extracted.salaryMin ?? undefined,
+        salaryMax: extracted.salaryMax ?? undefined,
+        salaryCurrency: extracted.salaryCurrency || undefined,
+        description: extracted.description,
+      });
+      reset();
+      onAdded(newId);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const modes: Array<{ value: AddMode; label: string }> = [
+    { value: 'normal', label: t('addjob.modeNormal') },
+    { value: 'ai', label: t('addjob.modeAI') },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) close(); }}>
       <DialogContent className="sm:max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain">
@@ -110,6 +164,29 @@ export function AddJobDialog({ open, onClose, onAdded }: AddJobDialogProps) {
           <DialogDescription className="text-pretty">{t('addjob.desc')}</DialogDescription>
         </DialogHeader>
 
+        <div role="group" aria-label={t('addjob.title')} className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1">
+          {modes.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              aria-pressed={mode === item.value}
+              disabled={saving}
+              onClick={() => {
+                setMode(item.value);
+                setError(null);
+              }}
+              className={`h-9 rounded-xl text-sm font-semibold cursor-pointer touch-manipulation motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50 ${
+                mode === item.value
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'normal' && (
         <div className="flex flex-col gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="addjob-url">{t('addjob.url')}</Label>
@@ -243,18 +320,47 @@ export function AddJobDialog({ open, onClose, onAdded }: AddJobDialogProps) {
             <p role="alert" className="text-sm font-medium text-destructive">{error}</p>
           )}
         </div>
+        )}
+
+        {mode === 'ai' && (
+        <div className="flex flex-col gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="addjob-paste">{t('addjob.aiPaste')}</Label>
+            <Textarea
+              id="addjob-paste"
+              value={pasted}
+              onChange={(e) => setPasted(e.target.value)}
+              rows={12}
+              placeholder="Paste the whole posting here…"
+              className="min-h-64 text-sm leading-relaxed"
+            />
+            <p className="text-xs text-pretty text-muted-foreground">{t('addjob.aiHint')}</p>
+          </div>
+
+          {error && (
+            <p role="alert" className="text-sm font-medium text-destructive">{error}</p>
+          )}
+        </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={close} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button
+            onClick={mode === 'ai' ? handleAiSave : handleSave}
+            disabled={saving || (mode === 'ai' && !pasted.trim())}
+          >
             {saving ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <Plus className="size-4" aria-hidden="true" />
             )}
-            {t('addjob.save')}
+            {saving && mode === 'ai'
+              ? t('addjob.aiReading')
+              : mode === 'ai'
+                ? t('addjob.aiSave')
+                : t('addjob.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

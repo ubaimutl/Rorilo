@@ -12,6 +12,7 @@ import {
 	MapPin,
 	ArrowUpRight,
 	Check,
+	ExternalLink,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -101,6 +102,9 @@ export function JobDrawer({
 	const strongMatches = parseJsonArray(job?.match?.strongMatches);
 	const missingSkills = parseJsonArray(job?.match?.missingSkills);
 	const techs = parseJsonArray(job?.technologies);
+	// Original posting: the job's own URL, else the first URL recorded in its source history.
+	const externalUrl =
+		job?.applicationUrl || job?.originalUrl || job?.sourceLinks?.[0]?.url || null;
 
 	let salaryStr = "";
 	if (job?.salaryMin || job?.salaryMax) {
@@ -318,10 +322,9 @@ export function JobDrawer({
 													className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
 												>
 													{tech}
-												</span>
-											))}
-										</div>
-									)}
+												</span>										))}
+									</div>
+								)}
 								</div>
 								{hasScore && (
 									<ScoreRing
@@ -444,13 +447,13 @@ export function JobDrawer({
 							</section>
 						</div>
 
-						<SheetFooter className="p-4 sm:px-6 border-t border-border bg-popover flex-col gap-2">
+						<SheetFooter className="px-4 py-2 sm:px-6 border-t border-border bg-popover flex-col gap-1.5">
 							<div className="flex items-center gap-2">
 								<Button
-									size="lg"
+									size="default"
 									onClick={handlePrepare}
 									disabled={preparing}
-									className="flex-1"
+									className="flex-1 h-8"
 								>
 									{preparing ? (
 										<Loader2
@@ -462,23 +465,23 @@ export function JobDrawer({
 									)}
 									{preparing
 										? t("material.preparing")
-										: t("material.prepareApplication")}
-								</Button>
+										: t("material.prepareApplication")}								</Button>
+
 								<button
 									type="button"
 									onClick={handleSave}
 									aria-label={isSaved ? t("jobcard.unsave") : t("jobcard.save")}
 									aria-pressed={isSaved}
 									title={isSaved ? t("jobcard.unsave") : t("jobcard.save")}
-									className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+									className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 								>
 									{isSaved ? (
 										<BookmarkCheck
-											className="size-5 text-primary"
+											className="size-4 text-primary"
 											aria-hidden="true"
 										/>
 									) : (
-										<Bookmark className="size-5" aria-hidden="true" />
+										<Bookmark className="size-4" aria-hidden="true" />
 									)}
 								</button>
 								<button
@@ -486,10 +489,22 @@ export function JobDrawer({
 									onClick={handleDelete}
 									aria-label={t("jobcard.delete")}
 									title={t("jobcard.delete")}
-									className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+									className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 								>
-									<Trash2 className="size-5" aria-hidden="true" />
+									<Trash2 className="size-4" aria-hidden="true" />
 								</button>
+								{externalUrl && (
+									<a
+									href={externalUrl}
+									target="_blank"
+									rel="noreferrer"
+									aria-label={t("material.openOriginal")}
+									title={t("material.openOriginal")}
+									className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted motion-safe:transition-colors cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+								>
+									<ExternalLink className="size-4" aria-hidden="true" />
+								</a>
+								)}
 							</div>
 							<div className="flex items-center gap-2">
 								<label htmlFor="drawer-status" className="sr-only">
@@ -500,7 +515,7 @@ export function JobDrawer({
 									value={job.application?.status || "NEW"}
 									onChange={(e) => handleStatusChange(e.target.value)}
 									disabled={statusSaving}
-									className="h-10 flex-1 rounded-2xl border border-border bg-transparent px-3 text-sm font-medium cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+									className="h-8 flex-1 rounded-xl border border-border bg-transparent px-3 text-sm font-medium cursor-pointer touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
 								>
 									<option value="NEW">{t("jobdetail.unapplied")}</option>
 									<option value="SAVED">{t("discover.tabs.saved")}</option>
@@ -513,7 +528,7 @@ export function JobDrawer({
 								<Link
 									href={`/jobs/${job.id}`}
 									onClick={onClose}
-									className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.07] motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
+									className="inline-flex h-8 shrink-0 items-center gap-1 rounded-xl px-2.5 text-sm font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.07] motion-safe:transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none touch-manipulation"
 								>
 									{t("jobcard.viewFull")}
 									<ArrowUpRight className="size-4" aria-hidden="true" />

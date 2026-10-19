@@ -93,9 +93,16 @@ export function SearchInsights({ refreshKey = 0 }: { refreshKey?: number }) {
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} className="h-9 px-3.5 text-sm">
-        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <History className="size-3.5" />}
-        <span>{t('insights.history')}</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setOpen(true)}
+        aria-label={t('insights.history')}
+        title={t('insights.history')}
+        className="text-muted-foreground hover:text-foreground"
+      >
+        {loading ? <Loader2 className="size-4 animate-spin" /> : <History className="size-4" />}
       </Button>
 
       {open && (
