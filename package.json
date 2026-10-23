@@ -1,6 +1,6 @@
 {
   "name": "rorilo",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -9,8 +9,9 @@
     "release:check": "node scripts/check-release.mjs",
     "desktop:bundle-server": "node scripts/bundle-desktop-server.mjs",
     "desktop:prepare-node": "node scripts/prepare-desktop-node.mjs",
+    "desktop:test-database": "node scripts/test-desktop-database.mjs",
     "desktop:package-native": "node scripts/build-desktop-native.mjs",
-    "desktop:build": "npm run build && npm run desktop:bundle-server && npm run desktop:prepare-node && npm run desktop:package-native",
+    "desktop:build": "npm run build && npm run desktop:bundle-server && npm run desktop:prepare-node && npm run desktop:test-database && npm run desktop:package-native",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run"
