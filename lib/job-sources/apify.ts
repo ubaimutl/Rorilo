@@ -2,7 +2,7 @@ import { JobSource, JobSearchParams, JobSourceSearchResult, NormalizedJobInput }
 import { normalizeJobPayload } from '../jobs/normalize';
 import { prisma } from '../prisma';
 
-import { resolveSourceAdapter } from './sources';
+import { adaptGoogleJobPayload, resolveSourceAdapter } from './sources';
 
 export interface ApifyConfig {
   apiToken: string;
@@ -139,7 +139,9 @@ export class ApifyJobSource implements JobSource {
 
   normalizeJob(rawItem: unknown): NormalizedJobInput {
     const adapter = resolveSourceAdapter(this.actorId);
-    return normalizeJobPayload(rawItem as Record<string, unknown>, adapter.displayName || this.name);
+    const raw = (rawItem ?? {}) as Record<string, unknown>;
+    const payload = adapter.sourceId === 'google' ? adaptGoogleJobPayload(raw) : raw;
+    return normalizeJobPayload(payload, adapter.displayName || this.name);
   }
 }
 

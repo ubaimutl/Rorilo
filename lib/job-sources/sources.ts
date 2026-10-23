@@ -19,6 +19,35 @@ export interface JobSourceDefinition {
   }) => Record<string, unknown>;
 }
 
+/** Rorilo country codes this Google Jobs actor actually serves. GB maps to `uk`. */
+const GOOGLE_JOBS_COUNTRY: Record<string, string> = {
+  DE: 'de',
+  AT: 'at',
+  CH: 'ch',
+  NL: 'nl',
+  ES: 'es',
+  IT: 'it',
+  US: 'us',
+  CA: 'ca',
+  GB: 'uk',
+};
+
+/** Actor input schema rejects `num_results` below 10. */
+const GOOGLE_JOBS_MIN_RESULTS = 10;
+
+/**
+ * Maps a Rorilo country onto the actor country code.
+ * Throws for countries Google Jobs does not serve (FR, AU, PL in this app).
+ */
+function googleJobsCountry(country?: string): string {
+  const code = normalizeCountryCode(country);
+  const mapped = GOOGLE_JOBS_COUNTRY[code];
+  if (!mapped) {
+    throw new Error(`Google Jobs does not support ${code}. Choose another source for this country.`);
+  }
+  return mapped;
+}
+
 export const KNOWN_JOB_SOURCES: Record<string, JobSourceDefinition> = {
   // --- German / DACH Specialized Sources ---
   stepstone: {
@@ -147,15 +176,18 @@ export const KNOWN_JOB_SOURCES: Record<string, JobSourceDefinition> = {
     id: 'google',
     name: 'Google Jobs',
     tagline: 'Aggregated listings across thousands of career sites',
-    coverage: { global: true },
-    actorId: 'apify/google-jobs-scraper',
+    coverage: { countries: Object.keys(GOOGLE_JOBS_COUNTRY) },
+    actorId: 'johnvc/Google-Jobs-Scraper',
     defaultEnabled: false,
     buildInput: ({ title, keywords, country, location, limit }) => {
       const q = [title, ...(keywords || [])].filter(Boolean).join(' ').trim() || 'Software Engineer';
-      const query = location ? `${q} in ${location}` : `${q} in ${countryName(country)}`;
+      const numResults = Math.max(GOOGLE_JOBS_MIN_RESULTS, limit);
       return {
-        queries: query,
-        maxItems: limit,
+        query: q,
+        location: location || countryName(country),
+        country: googleJobsCountry(country),
+        num_results: numResults,
+        max_pagination: Math.max(1, Math.ceil(numResults / 10)),
       };
     },
   },
@@ -176,6 +208,29 @@ export const KNOWN_JOB_SOURCES: Record<string, JobSourceDefinition> = {
     },
   },
 };
+
+/**
+ * Adds this repo's field names onto a johnvc Google Jobs row.
+ * Original keys are kept.
+ */
+export function adaptGoogleJobPayload(raw: Record<string, unknown>): Record<string, unknown> {
+  const options = raw.apply_options;
+  const first = Array.isArray(options) ? options[0] : undefined;
+  const firstLink =
+    first && typeof first === 'object' && first !== null && 'link' in first
+      ? (first as { link?: unknown }).link
+      : undefined;
+  const shareLink = typeof raw.share_link === 'string' ? raw.share_link : undefined;
+  const applyLink = typeof firstLink === 'string' && firstLink ? firstLink : shareLink;
+
+  return {
+    ...raw,
+    company: raw.company ?? raw.company_name,
+    applyUrl: raw.applyUrl ?? applyLink,
+    originalUrl: raw.originalUrl ?? shareLink,
+    jobId: raw.jobId ?? raw.job_id,
+  };
+}
 
 /**
  * Resolves an identifier (either a known source id like "stepstone" or an Apify actor ID)
