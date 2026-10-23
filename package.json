@@ -1,11 +1,12 @@
 {
   "name": "rorilo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "release:check": "node scripts/check-release.mjs",
     "desktop:bundle-server": "node scripts/bundle-desktop-server.mjs",
     "desktop:prepare-node": "node scripts/prepare-desktop-node.mjs",
     "desktop:package-native": "node scripts/build-desktop-native.mjs",
