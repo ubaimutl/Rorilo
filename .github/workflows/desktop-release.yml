@@ -46,7 +46,11 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run release:check
+
       - run: npx prisma generate
+
+      - run: npm test
 
       - run: npm run build
 
@@ -75,6 +79,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+
       - name: Download desktop artifacts
         uses: actions/download-artifact@v4
         with:
@@ -87,7 +94,7 @@ jobs:
           draft: true
           prerelease: false
           name: Rorilo ${{ github.ref_name }}
-          body: Desktop builds for Rorilo.
+          body_path: releases/${{ github.ref_name }}.md
           files: |
             artifacts/**/*.AppImage
             artifacts/**/*.dmg
