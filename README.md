@@ -15,7 +15,6 @@ Your profile, jobs, drafts, and settings stay on your machine. Rorilo does not b
 - [How it works](#how-it-works)
 - [Job sources](#job-sources)
 - [Privacy](#privacy)
-- [Code Signing Policy](#code-signing-policy)
 - [Docker](#docker)
 - [Development from source](#development-from-source)
 - [Environment variables](#environment-variables)
@@ -102,20 +101,6 @@ Your CV text, profile, search history, job data, generated drafts, and settings 
 - Gmail for draft creation
 
 Rorilo does not submit job applications automatically.
-
-## Code Signing Policy
-
-Windows release builds may be signed through [SignPath.io](https://signpath.io/), with the code signing certificate provided by the SignPath Foundation for open source projects.
-
-Signing is used only to identify official Rorilo Windows binaries that were produced from this public repository and its GitHub Actions release workflow. It does not change the application's local-first privacy model.
-
-Project roles:
-
-- Committers maintain the source code and submit changes through the public GitHub repository.
-- Reviewers check code, packaging, and release changes before they are accepted.
-- Approvers authorize signing requests and release publication after verifying that the artifacts come from the expected GitHub Actions workflow.
-
-Rorilo stores profile data, CV text, job data, settings, and generated drafts locally on the user's machine. External network requests happen only for integrations the user configures, such as an AI provider, job sources, Apify, Logo.dev, or Gmail draft creation.
 
 ## Docker
 
