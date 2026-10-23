@@ -236,7 +236,12 @@ export function adaptGoogleJobPayload(raw: Record<string, unknown>): Record<stri
  * Resolves an identifier (either a known source id like "stepstone" or an Apify actor ID)
  * into an actorId and appropriate input payload builder.
  */
-export function resolveSourceAdapter(sourceOrActor: string) {
+export function resolveSourceAdapter(sourceOrActor: string): {
+  sourceId: string;
+  displayName: string;
+  actorId: string;
+  buildInput: JobSourceDefinition['buildInput'];
+} {
   const lower = sourceOrActor.toLowerCase().trim();
   const known = KNOWN_JOB_SOURCES[lower];
   if (known) {
