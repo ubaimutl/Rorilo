@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { extractTextFromPdf, parseCvTextToStructured } from '@/lib/cv/parser';
+import { saveActiveCv } from '@/lib/cv/store';
 
 function parseJsonArray(value?: string | null): string[] {
   if (!value) return [];
@@ -81,36 +82,17 @@ export async function POST(req: Request) {
     // AI-first structured extraction, falls back silently to local heuristic parser
     const { structured, parsedByAi, parseError } = await parseCvTextToStructured(extractedText);
 
-    // Mark previous CVs inactive
-    await prisma.cV.updateMany({
-      data: { isActive: false },
-    });
-
     // Save active CV record (file bytes stay server-side; never send them back as JSON)
     // Note: cast is safe — the buffers always wrap real ArrayBuffers at runtime.
     const fileBytes = (fileData as Uint8Array<ArrayBuffer> | null) ?? undefined;
-    const cv = await prisma.cV.create({
-      data: {
-        originalFilename: filename,
-        fileData: fileBytes,
-        mimeType,
-        fileSize: fileData ? fileData.byteLength : undefined,
-        extractedText,
-        structuredData: JSON.stringify(structured),
-        isActive: true,
-      },
-      select: {
-        id: true,
-        originalFilename: true,
-        mimeType: true,
-        fileSize: true,
-        extractedText: true,
-        structuredData: true,
-        isActive: true,
-        uploadDate: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const cv = await saveActiveCv({
+      originalFilename: filename,
+      fileData: fileBytes,
+      mimeType,
+      fileSize: fileData ? fileData.byteLength : undefined,
+      extractedText,
+      structuredData: JSON.stringify(structured),
+      isActive: true,
     });
 
     // Update UserProfile with extracted data
