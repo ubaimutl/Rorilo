@@ -58,8 +58,35 @@ jobs:
 
       - run: npm run desktop:prepare-node
 
+      - run: npm run desktop:test-database
+
+      - name: Test Linux database with OpenSSL 1.1 and 3
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for image in node:22-bullseye node:22-bookworm; do
+            docker run --rm --network none --volume "$PWD:/workspace:ro" "$image" \
+              node /workspace/scripts/test-desktop-database.mjs /workspace/src-tauri/resources
+          done
+
       - name: Build desktop app
         run: npm run desktop:package-native
+
+      - name: Test database in extracted Linux AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          appimage=(src-tauri/target/release/bundle/appimage/*.AppImage)
+          test "${#appimage[@]}" -eq 1
+          appimage_path="$(realpath "${appimage[0]}")"
+          test_dir="$(mktemp -d)"
+          trap 'rm -rf "$test_dir"' EXIT
+          (cd "$test_dir" && "$appimage_path" --appimage-extract > /dev/null)
+          appdir="$test_dir/squashfs-root"
+          LD_LIBRARY_PATH="$appdir/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            node scripts/test-desktop-database.mjs "$appdir/usr/lib/Rorilo/resources"
 
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
