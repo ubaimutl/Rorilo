@@ -1,0 +1,128 @@
+name: Replace broken desktop releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Desktop release run containing the corrected v0.2.1 installers
+        required: true
+      source_sha:
+        description: Exact commit tested by that run
+        required: true
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: replace-desktop-release
+  cancel-in-progress: false
+
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ inputs.run_id }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Verify source and wait for existing builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/$RUN_ID" > run.json
+          jq -e --arg sha "$SOURCE_SHA" --arg repo "$GH_REPO" \
+            '.head_sha == $sha and .head_repository.full_name == $repo and .path == ".github/workflows/desktop-release.yml"' run.json
+          gh run watch "$RUN_ID" --exit-status --interval 30
+          gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs?per_page=100" > jobs.json
+          for platform in Linux Windows 'macOS Intel' 'macOS Apple Silicon'; do
+            jq -e --arg name "Build $platform" \
+              '[.jobs[] | select(.name == $name and .conclusion == "success")] | length == 1' jobs.json
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify versions and download tested installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-release.mjs
+          test "$(node -p 'require("./package.json").version')" = 0.2.1
+          gh run download "$RUN_ID" --dir artifacts
+          mkdir installers
+          for name in Rorilo_0.2.1_amd64.AppImage Rorilo_0.2.1_x64-setup.exe Rorilo_0.2.1_x64_en-US.msi Rorilo_0.2.1_x64.dmg Rorilo_0.2.1_aarch64.dmg; do
+            mapfile -d '' matches < <(find artifacts -type f -name "$name" -print0)
+            test "${#matches[@]}" -eq 1
+            test -s "${matches[0]}"
+            mv "${matches[0]}" "installers/$name"
+          done
+          (cd installers && sha256sum Rorilo_* > SHA256SUMS.txt)
+
+      - name: Replace v0.2.1 with corrected installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/releases/tags/v0.2.1" > release.json
+          jq -e '.draft == false and .immutable != true' release.json
+          old_sha="$(gh api "repos/$GH_REPO/git/ref/tags/v0.2.1" --jq '.object.sha')"
+          # Refuse to move a tag that someone else has changed to an unexpected commit.
+          test "$old_sha" = b100edb244fe18561dc9bde205355744cbded8cf || test "$old_sha" = "$SOURCE_SHA"
+          gh release upload v0.2.1 installers/* --clobber
+          # GITHUB_TOKEN changes do not trigger a duplicate installer build.
+          gh api --method PATCH "repos/$GH_REPO/git/refs/tags/v0.2.1" -f sha="$SOURCE_SHA" -F force=true
+          cat > corrected-notes.md <<'NOTES'
+          # Rorilo v0.2.1 — corrected desktop installers
+
+          These installers replace the original broken v0.2.0 and v0.2.1 downloads.
+
+          - Fix Linux Prisma engine compatibility with OpenSSL 1.1 and OpenSSL 3.
+          - Upgrade existing databases before starting the app, including missing CV file columns. Existing data is preserved and a backup is created before schema changes.
+          - Preserve the previous active CV if saving a replacement fails, and retain uploaded CV files when restoring a data export.
+          - Verify fresh databases and upgrades from v0.1.0, bundled database operations, and native startup on Linux, Windows, and both Mac architectures before publication.
+
+          Download the installer for your platform again even if you already installed v0.2.1. Keep your existing application data directory; no database reset is needed. SHA256SUMS.txt contains checksums for these replacement installers.
+          NOTES
+          printf '\nTested source: `%s`\nBuild: https://github.com/%s/actions/runs/%s\n' "$SOURCE_SHA" "$GH_REPO" "$RUN_ID" >> corrected-notes.md
+          gh release edit v0.2.1 --title 'Rorilo v0.2.1 (database fixes)' --notes-file corrected-notes.md --latest
+          gh api "repos/$GH_REPO/releases/tags/v0.2.1" > updated-release.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, readdirSync, statSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import assert from 'node:assert/strict';
+          const release = JSON.parse(readFileSync('updated-release.json'));
+          assert.equal(release.draft, false);
+          for (const name of readdirSync('installers')) {
+            const asset = release.assets.find(asset => asset.name === name);
+            assert.ok(asset, `Missing published asset: ${name}`);
+            assert.equal(asset.state, 'uploaded');
+            assert.equal(asset.size, statSync(`installers/${name}`).size);
+            const digest = `sha256:${createHash('sha256').update(readFileSync(`installers/${name}`)).digest('hex')}`;
+            assert.equal(asset.digest, digest, `Published checksum mismatch: ${name}`);
+          }
+          NODE
+
+      - name: Withdraw broken v0.2.0 installers
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/releases/tags/v0.2.0" --jq '.assets[].id' > old-assets.txt
+          while read -r asset_id; do
+            gh api --method DELETE "repos/$GH_REPO/releases/assets/$asset_id"
+          done < old-assets.txt
+          cat > withdrawn-notes.md <<'NOTES'
+          This release was withdrawn because its desktop installers could fail to open the database.
+
+          Download the corrected desktop installers from [Rorilo v0.2.1](https://github.com/ubaimutl/Rorilo/releases/tag/v0.2.1). Keep your existing application data directory; the corrected app backs up and upgrades existing databases before startup.
+          NOTES
+          gh release edit v0.2.0 --title 'Rorilo v0.2.0 (withdrawn — use v0.2.1)' --notes-file withdrawn-notes.md --latest=false
+          test "$(gh api "repos/$GH_REPO/releases/tags/v0.2.0" --jq '.assets | length')" -eq 0
+          test "$(gh api "repos/$GH_REPO/releases/latest" --jq '.tag_name')" = v0.2.1
+          printf 'Replaced v0.2.1 and withdrew broken v0.2.0 installers.\n' >> "$GITHUB_STEP_SUMMARY"
