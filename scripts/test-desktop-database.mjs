@@ -12,6 +12,7 @@ const node = path.join(resources, 'node', ...(process.platform === 'win32' ? ['n
 
 assert.ok(statSync(node).isFile(), 'The bundled Node runtime is missing');
 assert.ok(statSync(path.join(server, 'server.js')).isFile(), 'The desktop server is missing');
+assert.ok(statSync(path.join(server, 'migrate-desktop-database.mjs')).isFile(), 'The database upgrade helper is missing');
 if (process.platform === 'linux' && process.arch === 'x64') {
   for (const target of ['debian-openssl-1.1.x', 'debian-openssl-3.0.x']) {
     const engine = path.join(server, 'node_modules', '.prisma', 'client', `libquery_engine-${target}.so.node`);
@@ -20,34 +21,13 @@ if (process.platform === 'linux' && process.arch === 'x64') {
 }
 
 const temp = mkdtempSync(path.join(os.tmpdir(), 'rorilo-desktop-db-'));
-const worker = String.raw`
-  const assert = require('node:assert/strict');
-  const path = require('node:path');
-  const { createRequire } = require('node:module');
-  const [server, temp] = process.argv.slice(1);
-  const bundledRequire = createRequire(path.join(server, 'server.js'));
-  const { PrismaClient } = bundledRequire('@prisma/client');
-  const database = path.join(temp, 'smoke.db').split(path.sep).join('/');
-  const prisma = new PrismaClient({ datasources: { db: { url: 'file:' + database } } });
-  async function main() {
-    try {
-      await prisma.$executeRawUnsafe('CREATE TABLE "UserProfile" ("id" TEXT NOT NULL PRIMARY KEY)');
-      await prisma.$executeRawUnsafe('INSERT INTO "UserProfile" ("id") VALUES (?)', 'desktop-smoke');
-      const profile = await prisma.userProfile.findFirst({ select: { id: true } });
-      assert.equal(profile?.id, 'desktop-smoke');
-      console.log('Packaged Prisma client opened, wrote, and read a temporary SQLite database.');
-    } finally {
-      await prisma.$disconnect().catch(() => {});
-    }
-  }
-  main().catch(error => { console.error(error); process.exitCode = 1; });
-`;
+const worker = path.join(root, 'scripts', 'desktop-database-smoke.mjs');
 
 try {
   const env = { ...process.env };
   delete env.PRISMA_QUERY_ENGINE_LIBRARY;
   delete env.PRISMA_QUERY_ENGINE_BINARY;
-  const result = spawnSync(node, ['-e', worker, server, temp], {
+  const result = spawnSync(node, [worker, server, temp, path.join(resources, 'schema.sql'), path.join(root, 'tests', 'fixtures', 'database-v0.1.0.sql')], {
     cwd: temp,
     env,
     encoding: 'utf8',

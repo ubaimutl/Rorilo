@@ -100,6 +100,25 @@ function normalizeRows(value: unknown): Array<Record<string, unknown>> {
   );
 }
 
+function reviveCvFileData(row: Record<string, unknown>): Record<string, unknown> {
+  const value = row.fileData;
+  if (value == null || value instanceof Uint8Array) return row;
+  let bytes: unknown[] | undefined;
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (record.type === 'Buffer' && Array.isArray(record.data)) {
+      bytes = record.data;
+    } else {
+      const keys = Object.keys(record);
+      if (keys.every((key, index) => key === String(index))) bytes = Object.values(record);
+    }
+  }
+  if (!bytes || !bytes.every(byte => typeof byte === 'number' && Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+    throw new Error('The backup contains invalid CV file data.');
+  }
+  return { ...row, fileData: Uint8Array.from(bytes as number[]) };
+}
+
 export async function exportPortableBackup(): Promise<PortableBackup> {
   const tables = {} as PortableBackup['tables'];
   for (const model of EXPORT_MODELS) {
@@ -123,7 +142,10 @@ export function parsePortableBackup(input: unknown): PortableBackup {
   }
   const tables = {} as PortableBackup['tables'];
   for (const model of EXPORT_MODELS) {
-    tables[model] = normalizeRows((record.tables as Record<string, unknown>)[model]).map(reviveDates);
+    tables[model] = normalizeRows((record.tables as Record<string, unknown>)[model]).map(row => {
+      const revived = reviveDates(row);
+      return model === 'cV' ? reviveCvFileData(revived) : revived;
+    });
   }
   return {
     app: 'rorilo',

@@ -16,6 +16,7 @@ The next prepared release is **v0.2.1**. Its notes are in [releases/v0.2.1.md](.
    npx tsc --noEmit
    npm run build
    npm run desktop:bundle-server
+   npm run desktop:test-upgrades
    npm run desktop:prepare-node
    npm run desktop:test-database
    ```

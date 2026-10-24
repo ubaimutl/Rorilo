@@ -56,6 +56,8 @@ jobs:
 
       - run: npm run desktop:bundle-server
 
+      - run: npm run desktop:test-upgrades
+
       - run: npm run desktop:prepare-node
 
       - run: npm run desktop:test-database
@@ -72,6 +74,9 @@ jobs:
 
       - name: Build desktop app
         run: npm run desktop:package-native
+
+      - name: Test desktop startup and database upgrades
+        run: cargo test --release --locked --features tauri/custom-protocol --manifest-path src-tauri/Cargo.toml
 
       - name: Test database in extracted Linux AppImage
         if: runner.os == 'Linux'

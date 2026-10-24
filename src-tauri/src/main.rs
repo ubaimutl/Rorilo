@@ -76,8 +76,20 @@ fn resource_candidates(resource_dir: &Path) -> Vec<PathBuf> {
     }
 
     if let Some(app_dir) = env_path("APPDIR") {
-        candidates.push(app_dir.join("usr").join("lib").join("Rorilo").join("resources"));
-        candidates.push(app_dir.join("usr").join("lib").join("rorilo").join("resources"));
+        candidates.push(
+            app_dir
+                .join("usr")
+                .join("lib")
+                .join("Rorilo")
+                .join("resources"),
+        );
+        candidates.push(
+            app_dir
+                .join("usr")
+                .join("lib")
+                .join("rorilo")
+                .join("resources"),
+        );
     }
 
     candidates
@@ -89,6 +101,10 @@ fn resolve_resource_dir(resource_dir: &Path) -> Result<PathBuf, String> {
     for candidate in &candidates {
         if candidate.join("schema.sql").is_file()
             && candidate.join("server").join("server.js").is_file()
+            && candidate
+                .join("server")
+                .join("migrate-desktop-database.mjs")
+                .is_file()
             && node_path(candidate).is_file()
         {
             return Ok(candidate.to_path_buf());
@@ -101,7 +117,9 @@ fn resolve_resource_dir(resource_dir: &Path) -> Result<PathBuf, String> {
         .collect::<Vec<_>>()
         .join(", ");
 
-    Err(format!("Could not find bundled Rorilo resources. Searched: {searched}"))
+    Err(format!(
+        "Could not find bundled Rorilo resources. Searched: {searched}"
+    ))
 }
 
 fn wait_ready(port: u16, timeout: Duration) -> bool {
@@ -243,22 +261,33 @@ fn spawn_server(
     })
 }
 
-fn init_database(db_path: &PathBuf, schema_path: &PathBuf) -> Result<(), String> {
-    if db_path
-        .metadata()
-        .map(|metadata| metadata.len() > 0)
-        .unwrap_or(false)
+fn init_database(
+    node: &Path,
+    server_dir: &Path,
+    db_path: &Path,
+    schema_path: &Path,
+) -> Result<(), String> {
+    let mut command = Command::new(node);
+    command
+        .arg(server_dir.join("migrate-desktop-database.mjs"))
+        .arg(db_path)
+        .arg(schema_path);
+
+    #[cfg(windows)]
     {
-        return Ok(());
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(CREATE_NO_WINDOW);
     }
 
-    let schema = std::fs::read_to_string(schema_path)
-        .map_err(|error| format!("Could not read bundled database schema: {error}"))?;
-    let connection = rusqlite::Connection::open(db_path)
-        .map_err(|error| format!("Could not create local database: {error}"))?;
-    connection
-        .execute_batch(&schema)
-        .map_err(|error| format!("Could not initialize local database: {error}"))?;
+    let output = command
+        .output()
+        .map_err(|error| format!("Could not start database preparation: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Could not prepare local database: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
     Ok(())
 }
 
@@ -304,7 +333,7 @@ fn main() {
             let schema_path =
                 env_path("RORILO_SCHEMA").unwrap_or_else(|| resource_dir.join("schema.sql"));
 
-            init_database(&db_path, &schema_path).expect("prepare database");
+            init_database(&node, &server_dir, &db_path, &schema_path).expect("prepare database");
 
             let child = spawn_server(&node, &server_dir, &port, &database_url)?;
 
@@ -357,24 +386,33 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_resource_dir;
+    use super::{init_database, node_path, resolve_resource_dir};
     use std::fs;
     use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn make_resource_dir(path: &Path) {
         fs::create_dir_all(path.join("server")).unwrap();
-        fs::create_dir_all(path.join("node").join("bin")).unwrap();
+        let node = if cfg!(windows) {
+            path.join("node").join("node.exe")
+        } else {
+            path.join("node").join("bin").join("node")
+        };
+        fs::create_dir_all(node.parent().unwrap()).unwrap();
         fs::write(path.join("schema.sql"), "").unwrap();
         fs::write(path.join("server").join("server.js"), "").unwrap();
-        fs::write(path.join("node").join("bin").join("node"), "").unwrap();
+        fs::write(path.join("server").join("migrate-desktop-database.mjs"), "").unwrap();
+        fs::write(node, "").unwrap();
     }
 
     #[test]
     fn resolves_direct_resource_dir() {
         let root = std::env::temp_dir().join(format!(
             "rorilo-resource-test-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let resources = root.join("resources");
         make_resource_dir(&resources);
@@ -389,14 +427,122 @@ mod tests {
     fn resolves_linux_appimage_usr_lib_layout() {
         let root = std::env::temp_dir().join(format!(
             "rorilo-appdir-test-{}",
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
-        let resources = root.join("usr").join("lib").join("Rorilo").join("resources");
+        let resources = root
+            .join("usr")
+            .join("lib")
+            .join("Rorilo")
+            .join("resources");
         make_resource_dir(&resources);
 
         let resolved = resolve_resource_dir(&root.join("usr")).unwrap();
 
         assert_eq!(resolved, resources);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    fn database_test_dir(label: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "rorilo-db-{label}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    #[test]
+    fn initializes_fresh_database_through_the_bundled_runtime() {
+        let resources = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources");
+        let root = database_test_dir("fresh");
+        let database = root.join("rorilo.db");
+        init_database(
+            &node_path(&resources),
+            &resources.join("server"),
+            &database,
+            &resources.join("schema.sql"),
+        )
+        .unwrap();
+        {
+            let db = rusqlite::Connection::open(&database).unwrap();
+            let exists: i64 = db
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('CV') WHERE name = 'fileData'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(exists, 1);
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn upgrades_existing_database_without_losing_the_cv() {
+        let resources = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources");
+        let root = database_test_dir("legacy");
+        let database = root.join("rorilo.db");
+        {
+            let db = rusqlite::Connection::open(&database).unwrap();
+            db.execute_batch(include_str!("../../tests/fixtures/database-v0.1.0.sql"))
+                .unwrap();
+            db.execute("INSERT INTO CV (id, originalFilename, extractedText, updatedAt) VALUES ('legacy', 'old.txt', 'Keep old CV', '2026-01-01')", []).unwrap();
+        }
+        for _ in 0..2 {
+            init_database(
+                &node_path(&resources),
+                &resources.join("server"),
+                &database,
+                &resources.join("schema.sql"),
+            )
+            .unwrap();
+        }
+        {
+            let db = rusqlite::Connection::open(&database).unwrap();
+            let cv: (String, Option<Vec<u8>>) = db
+                .query_row(
+                    "SELECT extractedText, fileData FROM CV WHERE id = 'legacy'",
+                    [],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .unwrap();
+            assert_eq!(cv, ("Keep old CV".to_string(), None));
+        }
+        let backups = fs::read_dir(&root)
+            .unwrap()
+            .filter(|entry| {
+                entry
+                    .as_ref()
+                    .unwrap()
+                    .file_name()
+                    .to_string_lossy()
+                    .contains(".before-upgrade-")
+            })
+            .count();
+        assert_eq!(backups, 1);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn reports_database_preparation_failure_before_server_start() {
+        let resources = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources");
+        let root = database_test_dir("invalid");
+        let schema = root.join("invalid.sql");
+        fs::write(&schema, "not valid SQL").unwrap();
+        let error = init_database(
+            &node_path(&resources),
+            &resources.join("server"),
+            &root.join("rorilo.db"),
+            &schema,
+        )
+        .unwrap_err();
+        assert!(error.contains("Could not prepare local database"));
         fs::remove_dir_all(root).unwrap();
     }
 }

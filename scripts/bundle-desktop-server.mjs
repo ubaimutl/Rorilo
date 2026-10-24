@@ -64,6 +64,7 @@ if (!(await exists(path.join(standaloneDir, 'server.js')))) {
 }
 
 await cp(standaloneDir, outDir, { recursive: true, force: true });
+await cp(path.join(root, 'scripts', 'migrate-desktop-database.mjs'), path.join(outDir, 'migrate-desktop-database.mjs'));
 await scrubLocalOnlyFiles(outDir);
 await mkdir(path.join(outDir, '.next'), { recursive: true });
 await copyIfExists(path.join(root, '.next', 'static'), path.join(outDir, '.next', 'static'));
